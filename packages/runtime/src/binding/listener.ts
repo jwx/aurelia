@@ -8,6 +8,7 @@ import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { EvaluateVisitor } from './evaluate-visitor';
 import { DelegationStrategy, IEventManager } from './event-manager';
+import { UnbindVisitor } from './bind-visitor';
 
 export class Listener implements IBinding {
   public $isBound: boolean = false;
@@ -55,9 +56,7 @@ export class Listener implements IBinding {
     this.$isBound = true;
     this.source = source;
 
-    if (this.sourceExpression.bind) {
-      this.sourceExpression.bind(flags, source, this);
-    }
+    UnbindVisitor.bind(flags, this.source, <any>this, this.sourceExpression);
 
     this.handler = this.eventManager.addEventListener(
       this.target,
@@ -74,9 +73,7 @@ export class Listener implements IBinding {
 
     this.$isBound = false;
 
-    if (this.sourceExpression.unbind) {
-      this.sourceExpression.unbind(flags, this.source, this);
-    }
+    UnbindVisitor.unbind(flags, this.source, <any>this, this.sourceExpression);
 
     this.source = null;
     this.handler.dispose();

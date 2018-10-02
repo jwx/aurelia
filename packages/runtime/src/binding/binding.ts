@@ -1,5 +1,6 @@
 import { IServiceLocator, Reporter } from '@aurelia/kernel';
 import { IExpression } from './ast';
+import { BindVisitor, UnbindVisitor } from './bind-visitor';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { BindingMode } from './binding-mode';
@@ -112,9 +113,7 @@ export class Binding implements IBinding, IPropertySubscriber {
     this.$scope = scope;
 
     let sourceExpression = this.sourceExpression;
-    if (sourceExpression.bind) {
-      sourceExpression.bind(flags, scope, this);
-    }
+    BindVisitor.bind(flags, scope, this, sourceExpression);
 
     const mode = this.mode;
     let targetObserver = this.targetObserver as IBindingTargetObserver;
@@ -149,9 +148,7 @@ export class Binding implements IBinding, IPropertySubscriber {
     this.$isBound = false;
 
     const sourceExpression = this.sourceExpression;
-    if (sourceExpression.unbind) {
-      sourceExpression.unbind(flags, this.$scope, this);
-    }
+    UnbindVisitor.unbind(flags, this.$scope, this, sourceExpression);
     this.$scope = null;
 
     const targetObserver = this.targetObserver as IBindingTargetObserver;

@@ -4,6 +4,7 @@ import { IBinding, IBindingTarget } from './binding';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { EvaluateVisitor } from './evaluate-visitor';
+import { UnbindVisitor, BindVisitor } from './bind-visitor';
 
 export class Ref implements IBinding {
   public $isBound: boolean = false;
@@ -27,9 +28,7 @@ export class Ref implements IBinding {
     this.$isBound = true;
     this.$scope = scope;
 
-    if (this.sourceExpression.bind) {
-      this.sourceExpression.bind(flags, scope, this);
-    }
+    BindVisitor.bind(flags, this.$scope, <any>this, this.sourceExpression);
 
     this.sourceExpression.assign(flags, this.$scope, this.locator, this.target);
   }
@@ -45,9 +44,7 @@ export class Ref implements IBinding {
       this.sourceExpression.assign(flags, this.$scope, this.locator, null);
     }
 
-    if (this.sourceExpression.unbind) {
-      this.sourceExpression.unbind(flags, this.$scope, null);
-    }
+    UnbindVisitor.unbind(flags, this.$scope, <any>this, this.sourceExpression);
 
     this.$scope = null;
   }

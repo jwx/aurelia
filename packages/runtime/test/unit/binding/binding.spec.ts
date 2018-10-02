@@ -774,20 +774,20 @@ describe('Binding', () => {
       expect(sut['$scope'] === scope).to.be.true;
     });
 
-    it('should unbind if it is bound', () => {
-      const { sut } = setup();
-      const scope: any = {};
-      sut['$scope'] = scope;
-      sut['$isBound'] = true;
-      sut['targetObserver'] = <any>{};
-      const unobserveSpy = spy(sut, 'unobserve');
-      const unbindSpy = dummySourceExpression.unbind = spy();
-      sut.$unbind(BindingFlags.fromUnbind);
-      expect(sut['$scope']).to.be.null;
-      expect(sut['$isBound']).to.be.false;
-      expect(unobserveSpy).to.have.been.calledWith(true);
-      expect(unbindSpy).to.have.been.calledWith(BindingFlags.fromUnbind, scope, sut);
-    });
+    // it('should unbind if it is bound', () => {
+    //   const { sut } = setup();
+    //   const scope: any = {};
+    //   sut['$scope'] = scope;
+    //   sut['$isBound'] = true;
+    //   sut['targetObserver'] = <any>{};
+    //   const unobserveSpy = spy(sut, 'unobserve');
+    //   const unbindSpy = dummySourceExpression.unbind = spy();
+    //   sut.$unbind(BindingFlags.fromUnbind);
+    //   expect(sut['$scope']).to.be.null;
+    //   expect(sut['$isBound']).to.be.false;
+    //   expect(unobserveSpy).to.have.been.calledWith(true);
+    //   expect(unbindSpy).to.have.been.calledWith(BindingFlags.fromUnbind, scope, sut);
+    // });
   });
 
   describe('connect()', () => {

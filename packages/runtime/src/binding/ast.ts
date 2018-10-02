@@ -2,12 +2,10 @@
 // tslint:disable:function-name
 // tslint:disable:no-empty
 import { IServiceLocator, PLATFORM } from '@aurelia/kernel';
-import { IBinding } from './binding';
 import { BindingBehaviorResource } from './binding-behavior';
 import { BindingContext, IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { Collection } from './observation';
-import { ISignaler } from './signaler';
 import { ValueConverterResource } from './value-converter';
 import { EvaluateVisitor } from './evaluate-visitor';
 
@@ -52,8 +50,6 @@ export interface IExpression {
   readonly $kind: ExpressionKind;
   accept<T = any>(visitor: IVisitor<T>): T;
   assign?(flags: BindingFlags, scope: IScope, locator: IServiceLocator | null, value: any): any;
-  bind?(flags: BindingFlags, scope: IScope, binding: IBinding): void;
-  unbind?(flags: BindingFlags, scope: IScope, binding: IBinding): void;
 }
 
 export const enum ExpressionKind {
@@ -94,48 +90,13 @@ export const enum ExpressionKind {
 
 export class BindingBehavior implements IExpression {
   public $kind: ExpressionKind;
-  private behaviorKey: string;
-  private expressionHasBind: boolean;
-  private expressionHasUnbind: boolean;
+  public behaviorKey: string;
   constructor(public expression: IsBindingBehavior, public name: string, public args: IsAssign[]) {
     this.behaviorKey = BindingBehaviorResource.keyFrom(this.name);
-    if ((<any>expression).expression) {
-      this.expressionHasBind = !!(<any>expression).bind;
-      this.expressionHasUnbind = !!(<any>expression).unbind;
-    } else {
-      this.expressionHasBind = false;
-      this.expressionHasUnbind = false;
-    }
   }
 
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
     return (<any>this.expression).assign(flags, scope, locator, value);
-  }
-
-  public bind(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    if (this.expressionHasBind) {
-      (<any>this.expression).bind(flags, scope, binding);
-    }
-    const behaviorKey = this.behaviorKey;
-    const locator = binding.locator;
-    const behavior = locator.get(behaviorKey) as BindingBehavior;
-    if (!behavior) {
-      throw new Error(`No BindingBehavior named "${this.name}" was found!`);
-    }
-    if ((binding as any)[behaviorKey]) {
-      throw new Error(`A binding behavior named "${this.name}" has already been applied to "${this.expression}"`);
-    }
-    binding[behaviorKey] = behavior;
-    behavior.bind.apply(behavior, [flags, scope, binding].concat(evalList(flags, scope, locator, this.args)));
-  }
-
-  public unbind(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const behaviorKey = this.behaviorKey;
-    binding[behaviorKey].unbind(flags, scope, binding);
-    binding[behaviorKey] = null;
-    if (this.expressionHasUnbind) {
-      (<any>this.expression).unbind(flags, scope, binding);
-    }
   }
 
   public accept<T>(visitor: IVisitor<T>): T {
@@ -159,19 +120,6 @@ export class ValueConverter implements IExpression {
       value = (<any>converter).fromView.apply(converter, [value].concat(evalList(flags, scope, locator, this.args)));
     }
     return (<any>this.expression).assign(flags, scope, locator, value);
-  }
-
-  public unbind(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const locator = binding.locator;
-    const converter = locator.get(this.converterKey);
-    const signals = (converter as any).signals;
-    if (signals === undefined) {
-      return;
-    }
-    const signaler = locator.get(ISignaler) as ISignaler;
-    for (let i = 0, ii = signals.length; i < ii; ++i) {
-      signaler.removeSignalListener(signals[i], binding as any);
-    }
   }
 
   public accept<T>(visitor: IVisitor<T>): T {

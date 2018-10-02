@@ -1,3 +1,4 @@
+import { BindVisitor, UnbindVisitor } from './bind-visitor';
 import { IServiceLocator, Reporter } from '@aurelia/kernel';
 import { IExpression } from './ast';
 import { Binding } from './binding';
@@ -75,9 +76,8 @@ export class LetBinding extends Binding {
     this.target = this.toViewModel ? scope.bindingContext : scope.overrideContext;
 
     const sourceExpression = this.sourceExpression;
-    if (sourceExpression.bind) {
-      sourceExpression.bind(flags, scope, this);
-    }
+    BindVisitor.bind(flags, scope, this, sourceExpression);
+
     // sourceExpression might have been changed during bind
     this.target[this.targetProperty] = EvaluateVisitor.evaluate(BindingFlags.fromBind, scope, this.locator, this.sourceExpression);
 
@@ -95,9 +95,7 @@ export class LetBinding extends Binding {
     this.$isBound = false;
 
     const sourceExpression = this.sourceExpression;
-    if (sourceExpression.unbind) {
-      sourceExpression.unbind(flags, this.$scope, this);
-    }
+    UnbindVisitor.unbind(flags, this.$scope, this, sourceExpression);
     this.$scope = null;
     this.unobserve(true);
   }

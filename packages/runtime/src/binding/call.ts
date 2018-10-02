@@ -1,3 +1,4 @@
+import { BindVisitor, UnbindVisitor } from './bind-visitor';
 import { IIndexable, IServiceLocator, Primitive } from '@aurelia/kernel';
 import { INode } from '../dom';
 import { IExpression } from './ast';
@@ -46,9 +47,7 @@ export class Call implements IBinding {
     this.$isBound = true;
     this.$scope = scope;
 
-    if (this.sourceExpression.bind) {
-      this.sourceExpression.bind(flags, scope, this);
-    }
+    BindVisitor.bind(flags, scope, <any>this, this.sourceExpression);
 
     this.targetObserver.setValue($args => this.callSource($args), flags);
   }
@@ -60,9 +59,7 @@ export class Call implements IBinding {
 
     this.$isBound = false;
 
-    if (this.sourceExpression.unbind) {
-      this.sourceExpression.unbind(flags, this.$scope, this);
-    }
+    UnbindVisitor.bind(flags, this.$scope, <any>this, this.sourceExpression);
 
     this.$scope = null;
     this.targetObserver.setValue(null, flags);

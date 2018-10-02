@@ -5,6 +5,7 @@ import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { BindingMode } from './binding-mode';
 import { IObserverLocator } from './observer-locator';
+import { ConnectVisitor } from './connect-visitor';
 
 // BindingMode is not a const enum (and therefore not inlined), so assigning them to a variable to save a member accessor is a minor perf tweak
 const { toView } = BindingMode;
@@ -83,7 +84,7 @@ export class LetBinding extends Binding {
     if ((mode & toView) !== toView) {
       throw new Error('Let binding only supports [toView] binding mode.');
     }
-    this.sourceExpression.connect(flags, scope, this);
+    ConnectVisitor.connect(flags, scope, this);
   }
 
   public $unbind(flags: BindingFlags): void {
@@ -113,7 +114,7 @@ export class LetBinding extends Binding {
     // not waiting to be intied
     this.target[this.targetProperty] = value;
 
-    sourceExpression.connect(flags, $scope, this);
+    ConnectVisitor.connect(flags, $scope, this);
   }
   //#endregion
 }

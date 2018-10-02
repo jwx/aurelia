@@ -50,7 +50,7 @@ describe('Call', () => {
           massSpy(scope.bindingContext, 'theFunc');
           massSpy(sut, 'callSource');
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate', 'assign', 'connect');
+          massSpy(expr, 'evaluate', 'assign');
           expr['bind'] = spy();
           expr['unbind'] = spy();
 
@@ -129,7 +129,7 @@ describe('Call', () => {
           massSpy(scope.bindingContext, 'theFunc');
           massSpy(sut, 'callSource');
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate', 'assign', 'connect');
+          massSpy(expr, 'evaluate', 'assign');
           expr['bind'] = spy();
           expr['unbind'] = spy();
 
@@ -221,7 +221,7 @@ describe('Call', () => {
           massSpy(scope.bindingContext, 'theFunc');
           massSpy(sut, 'callSource');
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate', 'assign', 'connect');
+          massSpy(expr, 'evaluate', 'assign');
 
           // - Act -
           sut.$bind(flags, scope);

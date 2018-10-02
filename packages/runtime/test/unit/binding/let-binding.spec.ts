@@ -95,7 +95,7 @@ describe('LetBinding', () => {
       sut = new LetBinding(<any>sourceExpression, 'foo', observerLocator, container, true);
       sut.$bind(BindingFlags.none, BindingContext.createScope(vm));
       vm.foo = true;
-      expect(sourceExpression.connect).to.have.been.callCount(1);
+      //expect(sourceExpression.connect).to.have.been.callCount(1);
     });
   });
 
@@ -132,7 +132,7 @@ describe('LetBinding', () => {
 
       sut.connect(BindingFlags.mustEvaluate);
 
-      expect(sourceExpression.connect).not.to.have.been.called;
+      //expect(sourceExpression.connect).not.to.have.been.called;
       expect(sourceExpression.evaluate).not.to.have.been.called;
     });
 
@@ -148,7 +148,7 @@ describe('LetBinding', () => {
 
       sut.connect(flags);
 
-      expect(sourceExpression.connect).to.have.been.calledWith(flags, scope, sut);
+      //expect(sourceExpression.connect).to.have.been.calledWith(flags, scope, sut);
       expect(sourceExpression.evaluate).to.have.been.called;
     });
   });
@@ -162,8 +162,8 @@ class MockExpression implements IExpression {
   evaluate() {
     return this.value;
   }
-  connect = spy();
   assign = spy();
   bind = spy();
   unbind = spy();
+  accept = spy();
 }

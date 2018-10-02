@@ -50,7 +50,6 @@ export interface IVisitor {
 export interface IExpression {
   readonly $kind: ExpressionKind;
   evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator | null): any;
-  connect(flags: BindingFlags, scope: IScope, binding: IBinding): any;
   accept(visitor: IVisitor): boolean;
   assign?(flags: BindingFlags, scope: IScope, locator: IServiceLocator | null, value: any): any;
   bind?(flags: BindingFlags, scope: IScope, binding: IBinding): void;
@@ -117,10 +116,6 @@ export class BindingBehavior implements IExpression {
     return (<any>this.expression).assign(flags, scope, locator, value);
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    this.expression.connect(flags, scope, binding);
-  }
-
   public bind(flags: BindingFlags, scope: IScope, binding: IBinding): void {
     if (this.expressionHasBind) {
       (<any>this.expression).bind(flags, scope, binding);
@@ -154,7 +149,7 @@ export class BindingBehavior implements IExpression {
 
 export class ValueConverter implements IExpression {
   public $kind: ExpressionKind;
-  private converterKey: string;
+  public converterKey: string;
   constructor(public expression: IsValueConverter, public name: string, public args: IsAssign[]) {
     this.converterKey = ValueConverterResource.keyFrom(this.name);
   }
@@ -188,27 +183,6 @@ export class ValueConverter implements IExpression {
     return (<any>this.expression).assign(flags, scope, locator, value);
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    this.expression.connect(flags, scope, binding);
-    const args = this.args;
-    for (let i = 0, ii = args.length; i < ii; ++i) {
-      args[i].connect(flags, scope, binding);
-    }
-    const locator = binding.locator;
-    const converter = locator.get(this.converterKey) as ISignaler;
-    if (!converter) {
-      throw new Error(`No ValueConverter named "${this.name}" was found!`);
-    }
-    const signals = (converter as any).signals;
-    if (signals === undefined) {
-      return;
-    }
-    const signaler = locator.get(ISignaler) as ISignaler;
-    for (let i = 0, ii = signals.length; i < ii; ++i) {
-      signaler.addSignalListener(signals[i], binding as any);
-    }
-  }
-
   public unbind(flags: BindingFlags, scope: IScope, binding: IBinding): void {
     const locator = binding.locator;
     const converter = locator.get(this.converterKey);
@@ -235,8 +209,6 @@ export class Assign implements IExpression {
     return this.target.assign(flags, scope, locator, this.value.evaluate(flags, scope, locator));
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void { }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
     (<any>this.value).assign(flags, scope, locator, value);
     this.target.assign(flags, scope, locator, value);
@@ -258,17 +230,6 @@ export class Conditional implements IExpression {
       : this.no.evaluate(flags, scope, locator);
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const condition = this.condition;
-    if (condition.evaluate(flags, scope, null)) {
-      this.condition.connect(flags, scope, binding);
-      this.yes.connect(flags, scope, binding);
-    } else {
-      this.condition.connect(flags, scope, binding);
-      this.no.connect(flags, scope, binding);
-    }
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitConditional(this);
   }
@@ -277,7 +238,6 @@ export class Conditional implements IExpression {
 export class AccessThis implements IExpression {
   public $kind: ExpressionKind;
   public assign: IExpression['assign'];
-  public connect: IExpression['connect'];
   constructor(public ancestor: number = 0) { }
 
   public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
@@ -309,12 +269,6 @@ export class AccessScope implements IExpression {
     return context ? (context[name] = value) : undefined;
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const name = this.name;
-    const context = BindingContext.get(scope, name, this.ancestor);
-    binding.observeProperty(context, name);
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitAccessScope(this);
   }
@@ -337,14 +291,6 @@ export class AccessMember implements IExpression {
     }
     instance[this.name] = value;
     return value;
-  }
-
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const obj = this.object.evaluate(flags, scope, null);
-    this.object.connect(flags, scope, binding);
-    if (obj) {
-      binding.observeProperty(obj, this.name);
-    }
   }
 
   public accept(visitor: IVisitor): boolean {
@@ -373,20 +319,6 @@ export class AccessKeyed implements IExpression {
     return instance[key] = value;
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const obj = this.object.evaluate(flags, scope, null);
-    this.object.connect(flags, scope, binding);
-    if (typeof obj === 'object' && obj !== null) {
-      this.key.connect(flags, scope, binding);
-      const key = this.key.evaluate(flags, scope, null);
-      // observe the property represented by the key as long as it's not an array indexer
-      // (note: string indexers behave the same way as numeric indexers as long as they represent numbers)
-      if (!(Array.isArray(obj) && isNumeric(key))) {
-        binding.observeProperty(obj, key);
-      }
-    }
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitAccessKeyed(this);
   }
@@ -407,13 +339,6 @@ export class CallScope implements IExpression {
     return undefined;
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const args = this.args;
-    for (let i = 0, ii = args.length; i < ii; ++i) {
-      args[i].connect(flags, scope, binding);
-    }
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitCallScope(this);
   }
@@ -432,17 +357,6 @@ export class CallMember implements IExpression {
       return func.apply(instance, args);
     }
     return undefined;
-  }
-
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const obj = this.object.evaluate(flags, scope, null);
-    this.object.connect(flags, scope, binding);
-    if (getFunction(flags & ~BindingFlags.mustEvaluate, obj, this.name)) {
-      const args = this.args;
-      for (let i = 0, ii = args.length; i < ii; ++i) {
-        args[i].connect(flags, scope, binding);
-      }
-    }
   }
 
   public accept(visitor: IVisitor): boolean {
@@ -466,17 +380,6 @@ export class CallFunction implements IExpression {
     throw new Error(`${this.func} is not a function`);
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const func = this.func.evaluate(flags, scope, null);
-    this.func.connect(flags, scope, binding);
-    if (typeof func === 'function') {
-      const args = this.args;
-      for (let i = 0, ii = args.length; i < ii; ++i) {
-        args[i].connect(flags, scope, binding);
-      }
-    }
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitCallFunction(this);
   }
@@ -493,15 +396,6 @@ export class Binary implements IExpression {
   }
 
   public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {}
-
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const left = this.left.evaluate(flags, scope, null);
-    this.left.connect(flags, scope, binding);
-    if (this.operation === '&&' && !left || this.operation === '||' && left) {
-      return;
-    }
-    this.right.connect(flags, scope, binding);
-  }
 
   private ['&&'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
     return this.left.evaluate(f, s, l) && this.right.evaluate(f, s, l);
@@ -584,10 +478,6 @@ export class Unary {
 
   public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {}
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    this.expression.connect(flags, scope, binding);
-  }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
     throw new Error(`Binding expression "${this}" cannot be assigned to.`);
   }
@@ -616,7 +506,6 @@ export class Unary {
 
 export class PrimitiveLiteral implements IExpression {
   public $kind: ExpressionKind;
-  public connect: IExpression['connect'];
   public assign: IExpression['assign'];
   constructor(public value: any) { }
 
@@ -647,12 +536,6 @@ export class HtmlLiteral implements IExpression {
     return result;
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    for (let i = 0, ii = this.parts.length; i < ii; ++i) {
-      this.parts[i].connect(flags, scope, binding);
-    }
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitHtmlLiteral(this);
   }
@@ -673,13 +556,6 @@ export class ArrayLiteral implements IExpression {
     return result;
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const elements = this.elements;
-    for (let i = 0, ii = elements.length; i < ii; ++i) {
-      elements[i].connect(flags, scope, binding);
-    }
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitArrayLiteral(this);
   }
@@ -698,14 +574,6 @@ export class ObjectLiteral implements IExpression {
       instance[keys[i]] = values[i].evaluate(flags, scope, locator);
     }
     return instance;
-  }
-
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const keys = this.keys;
-    const values = this.values;
-    for (let i = 0, ii = keys.length; i < ii; ++i) {
-      values[i].connect(flags, scope, binding);
-    }
   }
 
   public accept(visitor: IVisitor): boolean {
@@ -729,14 +597,6 @@ export class Template implements IExpression {
       result += cooked[i + 1];
     }
     return result;
-  }
-
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const expressions = this.expressions;
-    for (let i = 0, ii = expressions.length; i < ii; ++i) {
-      expressions[i].connect(flags, scope, binding);
-      i++;
-    }
   }
 
   public accept(visitor: IVisitor): boolean {
@@ -770,14 +630,6 @@ export class TaggedTemplate implements IExpression {
     return func.apply(null, [this.cooked].concat(results));
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const expressions = this.expressions;
-    for (let i = 0, ii = expressions.length; i < ii; ++i) {
-      expressions[i].connect(flags, scope, binding);
-    }
-    this.func.connect(flags, scope, binding);
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitTaggedTemplate(this);
   }
@@ -797,8 +649,6 @@ export class ArrayBindingPattern implements IExpression {
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, obj: any): any {
     // TODO
   }
-
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void { }
 
   public accept(visitor: IVisitor): boolean {
     return visitor.visitArrayBindingPattern(this);
@@ -821,8 +671,6 @@ export class ObjectBindingPattern implements IExpression {
     // TODO
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void { }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitObjectBindingPattern(this);
   }
@@ -838,7 +686,6 @@ export class BindingIdentifier implements IExpression {
   public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
     return this.name;
   }
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void { }
 
   public accept(visitor: IVisitor): boolean {
     return visitor.visitBindingIdentifier(this);
@@ -872,11 +719,6 @@ export class ForOfStatement implements IExpression {
     IterateForOfStatement[toStringTag.call(result)](result, func);
   }
 
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    this.declaration.connect(flags, scope, binding);
-    this.iterable.connect(flags, scope, binding);
-  }
-
   public accept(visitor: IVisitor): boolean {
     return visitor.visitForOfStatement(this);
   }
@@ -901,13 +743,6 @@ export class Interpolation implements IExpression {
       result += parts[i + 1];
     }
     return result;
-  }
-
-  public connect(flags: BindingFlags, scope: IScope, binding: IBinding): void {
-    const expressions = this.expressions;
-    for (let i = 0, ii = expressions.length; i < ii; ++i) {
-      expressions[i].connect(flags, scope, binding);
-    }
   }
 
   public accept(visitor: IVisitor): boolean {
@@ -969,22 +804,6 @@ function getFunction(flags: BindingFlags, obj: any, name: string): any {
   throw new Error(`${name} is not a function`);
 }
 
-function isNumeric(value: string): boolean {
-  // tslint:disable-next-line:no-reserved-keywords
-  const type = typeof value;
-  if (type === 'number') return true;
-  if (type !== 'string') return false;
-  const len = value.length;
-  if (len === 0) return false;
-  for (let i = 0; i < len; ++i) {
-    const char = value.charCodeAt(i);
-    if (char < 0x30 /*0*/ || char > 0x39/*9*/) {
-      return false;
-    }
-  }
-  return true;
-}
-
 /*@internal*/
 export const IterateForOfStatement = {
   ['[object Array]'](result: any[], func: (arr: Collection, index: number, item: any) => void): void {
@@ -1038,5 +857,4 @@ const ast = [AccessThis, AccessScope, ArrayLiteral, ObjectLiteral, PrimitiveLite
 for (let i = 0, ii = ast.length; i < ii; ++i) {
   const proto = ast[i].prototype;
   proto.assign = proto.assign || PLATFORM.noop;
-  proto.connect = proto.connect || PLATFORM.noop;
 }

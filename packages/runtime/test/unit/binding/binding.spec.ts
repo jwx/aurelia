@@ -7,6 +7,7 @@ import { expect } from 'chai';
 import { _, massSpy, massReset, massRestore, ensureNotCalled, eachCartesianJoinFactory, verifyEqual } from '../util';
 import sinon from 'sinon';
 import { parse, ParserState, Access, Precedence, parseCore } from '../../../../jit/src';
+import { ConnectVisitor } from '../../../src/binding/connect-visitor';
 
 /**
  * pad a string with spaces on the right-hand side until it's the specified length
@@ -150,7 +151,7 @@ describe('Binding', () => {
           massSpy(expr, 'evaluate');
 
           ensureNotCalled(sut, 'handleChange');
-          ensureNotCalled(expr, 'assign', 'connect');
+          ensureNotCalled(expr, 'assign');
 
           // - Act -
           sut.$bind(flags, scope);
@@ -215,7 +216,7 @@ describe('Binding', () => {
           stub.withArgs(target, prop);
 
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate', 'connect');
+          massSpy(expr, 'evaluate');
           massSpy(sut, 'addObserver', 'observeProperty');
 
           ensureNotCalled(sut, 'handleChange');
@@ -244,8 +245,8 @@ describe('Binding', () => {
           expect(expr.evaluate).to.have.been.calledOnce;
           expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
-          expect(expr.connect).to.have.been.calledOnce;
-          expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
+          // expect(expr.connect).to.have.been.calledOnce;
+          // expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
 
           expect(targetObserver.setValue).to.have.been.calledOnce;
           expect(targetObserver.setValue).to.have.been.calledWithExactly(srcVal, flags);
@@ -288,11 +289,11 @@ describe('Binding', () => {
             }
             massSpy(sut, 'handleChange', 'addObserver', 'observeProperty', 'unobserve');
             massSpy(targetObserver, 'setValue', 'getValue');
-            massSpy(expr, 'evaluate', 'connect');
+            massSpy(expr, 'evaluate');
           } else {
             ensureNotCalled(targetObserver, 'setValue', 'getValue');
             ensureNotCalled(sut, 'handleChange');
-            ensureNotCalled(expr, 'evaluate', 'connect');
+            ensureNotCalled(expr, 'evaluate');
           }
 
 
@@ -344,8 +345,8 @@ describe('Binding', () => {
             expect(targetObserver.setValue).to.have.been.calledOnce;
             expect(targetObserver.setValue).to.have.been.calledWithExactly(newValue, flags);
 
-            expect(expr.connect).to.have.been.calledOnce;
-            expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
+            // expect(expr.connect).to.have.been.calledOnce;
+            // expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
 
             expect(sut.unobserve).to.have.been.calledOnce;
             expect(sut.unobserve).to.have.been.calledWithExactly(false);
@@ -415,7 +416,7 @@ describe('Binding', () => {
           const targetObserver = observerLocator.getObserver(target, prop) as IBindingTargetObserver;
           massSpy(targetObserver, 'subscribe');
 
-          ensureNotCalled(expr, 'evaluate', 'connect', 'assign');
+          ensureNotCalled(expr, 'evaluate', 'assign');
           ensureNotCalled(targetObserver, 'setValue', 'getValue', 'removeSubscriber', 'callSubscribers');
           ensureNotCalled(sut, 'handleChange');
 
@@ -527,7 +528,7 @@ describe('Binding', () => {
           const targetObserver = observerLocator.getObserver(target, prop) as IBindingTargetObserver;
 
           massSpy(targetObserver, 'setValue', 'getValue', 'callSubscribers', 'subscribe');
-          massSpy(expr, 'evaluate', 'connect', 'assign');
+          massSpy(expr, 'evaluate', 'assign');
           massSpy(sut, 'addObserver', 'observeProperty', 'handleChange', 'unobserve');
 
           // - Act - Part 1
@@ -564,8 +565,8 @@ describe('Binding', () => {
           expect(expr.evaluate).to.have.been.calledOnce;
           expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
-          expect(expr.connect).to.have.been.calledOnce;
-          expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
+          // expect(expr.connect).to.have.been.calledOnce;
+          // expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
 
           expect(targetObserver.setValue).to.have.been.calledOnce;
           expect(targetObserver.setValue).to.have.been.calledWithExactly(srcVal, flags);
@@ -620,7 +621,7 @@ describe('Binding', () => {
             }
             massSpy(sut, 'handleChange', 'addObserver', 'observeProperty', 'unobserve');
             massSpy(targetObserver, 'setValue', 'getValue');
-            massSpy(expr, 'evaluate', 'connect');
+            massSpy(expr, 'evaluate');
           } else {
             //ensureNotCalled(targetObserver, 'setValue', 'getValue');
             //ensureNotCalled(sut, 'handleChange', 'addObserver', 'observeProperty', 'unobserve');
@@ -682,8 +683,8 @@ describe('Binding', () => {
             expect(targetObserver.setValue).to.have.been.calledOnce;
             expect(targetObserver.setValue).to.have.been.calledWithExactly(newValue1, flags);
 
-            expect(expr.connect).to.have.been.calledTwice;
-            expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
+            // expect(expr.connect).to.have.been.calledTwice;
+            // expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
 
             expect(sut.unobserve).to.have.been.calledTwice;
             expect(sut.unobserve).to.have.been.calledWithExactly(false);
@@ -795,9 +796,9 @@ describe('Binding', () => {
       const { sut } = setup(<any>sourceExpression);
       sut['targetObserver'] = targetObserver;
 
-      sut.connect(BindingFlags.mustEvaluate);
+      ConnectVisitor.connect(BindingFlags.mustEvaluate, null, null, sourceExpression);
 
-      expect(sourceExpression.connect).not.to.have.been.called;
+      //expect(sourceExpression.connect).not.to.have.been.called;
       expect(sourceExpression.evaluate).not.to.have.been.called;
       expect(targetObserver.setValue).not.to.have.been.called;
     });
@@ -812,9 +813,9 @@ describe('Binding', () => {
       sut['$isBound'] = true;
       const flags = BindingFlags.none;
 
-      sut.connect(flags);
+      ConnectVisitor.connect(flags, null, null, sourceExpression);
 
-      expect(sourceExpression.connect).to.have.been.calledWith(flags, scope, sut);
+      //expect(sourceExpression.connect).to.have.been.calledWith(flags, scope, sut);
       expect(sourceExpression.evaluate).not.to.have.been.called;
       expect(targetObserver.setValue).not.to.have.been.called;
     });
@@ -831,8 +832,8 @@ describe('Binding', () => {
 
       sut.connect(BindingFlags.mustEvaluate);
 
-      expect(sourceExpression.connect).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, sut);
-      expect(sourceExpression.evaluate).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, container);
+      //expect(sourceExpression.connect).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, sut);
+      expect(sourceExpression.evaluate).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, container)
       expect(targetObserver.setValue).to.have.been.calledWith(value);
     });
   });
@@ -980,8 +981,8 @@ class MockExpression implements IExpression {
   evaluate() {
     return this.value;
   }
-  connect = spy();
   assign = spy();
   bind = spy();
   unbind = spy();
+  accept = spy();
 }

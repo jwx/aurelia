@@ -3,6 +3,7 @@ import { IExpression } from './ast';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { BindingMode } from './binding-mode';
+import { ConnectVisitor } from './connect-visitor';
 import { AccessorOrObserver, IBindingTargetObserver, IBindScope, IPropertySubscriber, ISubscribable, MutationKind } from './observation';
 import { IObserverLocator } from './observer-locator';
 
@@ -82,7 +83,7 @@ export class Binding implements IBinding, IPropertySubscriber {
       }
       if (!(mode & oneTime)) {
         this.version++;
-        sourceExpression.connect(flags, $scope, this);
+        ConnectVisitor.connect(flags, $scope, this);
         this.unobserve(false);
       }
       return;
@@ -133,7 +134,7 @@ export class Binding implements IBinding, IPropertySubscriber {
       targetObserver.setValue(sourceExpression.evaluate(flags, scope, this.locator), flags);
     }
     if (mode & toView) {
-      sourceExpression.connect(flags, scope, this);
+      ConnectVisitor.connect(flags, scope, this);
     }
     if (mode & fromView) {
       targetObserver.subscribe(this);
@@ -175,7 +176,7 @@ export class Binding implements IBinding, IPropertySubscriber {
       this.targetObserver.setValue(value, flags);
     }
 
-    sourceExpression.connect(flags, $scope, this);
+    ConnectVisitor.connect(flags, $scope, this);
   }
 
   //#region ConnectableBinding

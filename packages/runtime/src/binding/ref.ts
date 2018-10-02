@@ -3,6 +3,7 @@ import { IExpression } from './ast';
 import { IBinding, IBindingTarget } from './binding';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
+import { EvaluateVisitor } from './evaluate-visitor';
 
 export class Ref implements IBinding {
   public $isBound: boolean = false;
@@ -40,7 +41,7 @@ export class Ref implements IBinding {
 
     this.$isBound = false;
 
-    if (this.sourceExpression.evaluate(flags, this.$scope, this.locator) === this.target) {
+    if (EvaluateVisitor.evaluate(flags, this.$scope, this.locator, this.sourceExpression) === this.target) {
       this.sourceExpression.assign(flags, this.$scope, this.locator, null);
     }
 

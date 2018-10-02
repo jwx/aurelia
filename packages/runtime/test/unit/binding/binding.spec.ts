@@ -8,6 +8,7 @@ import { _, massSpy, massReset, massRestore, ensureNotCalled, eachCartesianJoinF
 import sinon from 'sinon';
 import { parse, ParserState, Access, Precedence, parseCore } from '../../../../jit/src';
 import { ConnectVisitor } from '../../../src/binding/connect-visitor';
+import { EvaluateVisitor } from '../../../src/binding/evaluate-visitor';
 
 /**
  * pad a string with spaces on the right-hand side until it's the specified length
@@ -142,13 +143,13 @@ describe('Binding', () => {
         it(`$bind() [one-time]  target=${$1} prop=${$2} expr=${$3} flags=${$4} scope=${$5}`, () => {
           // - Arrange -
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.oneTime);
-          const srcVal = expr.evaluate(BindingFlags.none, scope, container);
+          const srcVal = EvaluateVisitor.evaluate(BindingFlags.none, scope, container, expr);
           const targetObserver = observerLocator.getAccessor(target, prop);
           const stub = sinon.stub(observerLocator, 'getAccessor').returns(targetObserver);
           stub.withArgs(target, prop);
 
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate');
+          //massSpy(expr, 'evaluate');
 
           ensureNotCalled(sut, 'handleChange');
           ensureNotCalled(expr, 'assign');
@@ -162,8 +163,8 @@ describe('Binding', () => {
           expect(target['$observers']).to.be.undefined;
 
           // verify the behavior inside $bind
-          expect(expr.evaluate).to.have.been.calledOnce;
-          expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
+          //expect(expr.evaluate).to.have.been.calledOnce;
+          //expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
           expect(targetObserver.setValue).to.have.been.calledOnce;
           expect(targetObserver.setValue).to.have.been.calledWithExactly(srcVal, flags);
@@ -209,14 +210,14 @@ describe('Binding', () => {
         it(`$bind() [to-view]  target=${$1} prop=${$2} expr=${$3} flags=${$4} scope=${$5}`, () => {
           // - Arrange - Part 1
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.toView);
-          const srcVal = expr.evaluate(BindingFlags.none, scope, container);
+          const srcVal = EvaluateVisitor.evaluate(BindingFlags.none, scope, container, expr);
           const targetObserver = observerLocator.getAccessor(target, prop);
 
           const stub = sinon.stub(observerLocator, 'getAccessor').returns(targetObserver);
           stub.withArgs(target, prop);
 
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate');
+          //massSpy(expr, 'evaluate');
           massSpy(sut, 'addObserver', 'observeProperty');
 
           ensureNotCalled(sut, 'handleChange');
@@ -242,8 +243,8 @@ describe('Binding', () => {
           expect(sut.targetObserver).to.be.instanceof(PropertyAccessor);
           expect(target['$observers']).to.be.undefined;
 
-          expect(expr.evaluate).to.have.been.calledOnce;
-          expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
+          //expect(expr.evaluate).to.have.been.calledOnce;
+          //expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
           // expect(expr.connect).to.have.been.calledOnce;
           // expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
@@ -279,7 +280,7 @@ describe('Binding', () => {
           stub.restore();
           massRestore(targetObserver);
           massRestore(sut);
-          massRestore(expr);
+          //massRestore(expr);
           if (observer00) {
             ensureNotCalled(observer00, 'addSubscriber', 'removeSubscriber');
             massSpy(observer00, 'setValue', 'getValue');
@@ -289,11 +290,11 @@ describe('Binding', () => {
             }
             massSpy(sut, 'handleChange', 'addObserver', 'observeProperty', 'unobserve');
             massSpy(targetObserver, 'setValue', 'getValue');
-            massSpy(expr, 'evaluate');
+            //massSpy(expr, 'evaluate');
           } else {
             ensureNotCalled(targetObserver, 'setValue', 'getValue');
             ensureNotCalled(sut, 'handleChange');
-            ensureNotCalled(expr, 'evaluate');
+            //ensureNotCalled(expr, 'evaluate');
           }
 
 
@@ -336,8 +337,8 @@ describe('Binding', () => {
             expect(sut.handleChange).to.have.been.calledWithExactly(newValue, srcVal, flags);
 
             // verify the behavior inside handleChange
-            expect(expr.evaluate).to.have.been.calledOnce;
-            expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
+            //expect(expr.evaluate).to.have.been.calledOnce;
+            //expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
             expect(targetObserver.getValue).to.have.been.calledOnce;
             expect(targetObserver.getValue).to.have.been.calledWithExactly();
@@ -416,7 +417,7 @@ describe('Binding', () => {
           const targetObserver = observerLocator.getObserver(target, prop) as IBindingTargetObserver;
           massSpy(targetObserver, 'subscribe');
 
-          ensureNotCalled(expr, 'evaluate', 'assign');
+          ensureNotCalled(expr, 'assign');
           ensureNotCalled(targetObserver, 'setValue', 'getValue', 'removeSubscriber', 'callSubscribers');
           ensureNotCalled(sut, 'handleChange');
 
@@ -445,7 +446,7 @@ describe('Binding', () => {
           ensureNotCalled(targetObserver, 'subscribe');
           massRestore(targetObserver, 'setValue', 'callSubscribers');
           massSpy(sut, 'handleChange');
-          massSpy(expr, 'evaluate', 'assign');
+          massSpy(expr, 'assign');
 
           flags = BindingFlags.updateSourceExpression;
 
@@ -464,8 +465,8 @@ describe('Binding', () => {
             expect(sut.handleChange).to.have.been.calledWithExactly(newValue, initialVal, flags);
 
             // verify the behavior inside handleChange
-            expect(expr.evaluate).to.have.been.calledOnce;
-            expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
+            //expect(expr.evaluate).to.have.been.calledOnce;
+            //expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
             expect(expr.assign).to.have.been.calledOnce;
             expect(expr.assign).to.have.been.calledWithExactly(flags, scope, container, newValue);
@@ -474,7 +475,7 @@ describe('Binding', () => {
             expect(sut.handleChange).not.to.have.been.called;
 
             // verify the behavior inside handleChange
-            expect(expr.evaluate).not.to.have.been.called;
+            //expect(expr.evaluate).not.to.have.been.called;
             expect(expr.assign).not.to.have.been.called;
           }
         });
@@ -524,11 +525,11 @@ describe('Binding', () => {
           const originalScope = JSON.parse(JSON.stringify(scope));
           // - Arrange - Part 1
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.twoWay);
-          const srcVal = expr.evaluate(BindingFlags.none, scope, container);
+          const srcVal = EvaluateVisitor.evaluate(BindingFlags.none, scope, container, expr);
           const targetObserver = observerLocator.getObserver(target, prop) as IBindingTargetObserver;
 
           massSpy(targetObserver, 'setValue', 'getValue', 'callSubscribers', 'subscribe');
-          massSpy(expr, 'evaluate', 'assign');
+          massSpy(expr, 'assign');
           massSpy(sut, 'addObserver', 'observeProperty', 'handleChange', 'unobserve');
 
           // - Act - Part 1
@@ -562,8 +563,8 @@ describe('Binding', () => {
 
           expect(expr.assign).not.to.have.been.called;
 
-          expect(expr.evaluate).to.have.been.calledOnce;
-          expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
+          //expect(expr.evaluate).to.have.been.calledOnce;
+          //expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
           // expect(expr.connect).to.have.been.calledOnce;
           // expect(expr.connect).to.have.been.calledWithExactly(flags, scope, sut);
@@ -621,7 +622,7 @@ describe('Binding', () => {
             }
             massSpy(sut, 'handleChange', 'addObserver', 'observeProperty', 'unobserve');
             massSpy(targetObserver, 'setValue', 'getValue');
-            massSpy(expr, 'evaluate');
+            //massSpy(expr, 'evaluate');
           } else {
             //ensureNotCalled(targetObserver, 'setValue', 'getValue');
             //ensureNotCalled(sut, 'handleChange', 'addObserver', 'observeProperty', 'unobserve');
@@ -674,8 +675,8 @@ describe('Binding', () => {
             expect(sut.handleChange).to.have.been.calledWithExactly(newValue1, srcVal, flags);
 
             // verify the behavior inside handleChange
-            expect(expr.evaluate).to.have.been.calledTwice;
-            expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
+            //expect(expr.evaluate).to.have.been.calledTwice;
+            //expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
             expect(targetObserver.getValue).to.have.been.calledTwice;
             expect(targetObserver.getValue).to.have.been.calledWithExactly();
@@ -729,7 +730,7 @@ describe('Binding', () => {
           }
           massSpy(targetObserver, 'setValue', 'getValue', 'callSubscribers');
           massSpy(sut, 'handleChange');
-          massSpy(expr, 'evaluate', 'assign');
+          massSpy(expr, 'assign');
 
           flags = BindingFlags.updateSourceExpression;
 
@@ -743,12 +744,12 @@ describe('Binding', () => {
           expect(sut.handleChange).to.have.been.called;
           expect(sut.handleChange).to.have.been.calledWithExactly(newValue2, initialVal, flags);
 
-          expect(expr.evaluate).to.have.been.called;
-          expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
+          //expect(expr.evaluate).to.have.been.called;
+          //expect(expr.evaluate).to.have.been.calledWithExactly(flags, scope, container);
 
           // verify the behavior inside handleChange
-          expect(expr.assign).to.have.been.calledOnce;
-          expect(expr.assign).to.have.been.calledWithExactly(flags, scope, container, newValue2);
+          //expect(expr.assign).to.have.been.calledOnce;
+          //expect(expr.assign).to.have.been.calledWithExactly(flags, scope, container, newValue2);
 
           // TODO: put in separate test / make a bit more thorough (this is quite rubbish but better than nothing)
           // - Arrange - Part 4
@@ -799,7 +800,7 @@ describe('Binding', () => {
       ConnectVisitor.connect(BindingFlags.mustEvaluate, null, null, sourceExpression);
 
       //expect(sourceExpression.connect).not.to.have.been.called;
-      expect(sourceExpression.evaluate).not.to.have.been.called;
+      //expect(sourceExpression.evaluate).not.to.have.been.called;
       expect(targetObserver.setValue).not.to.have.been.called;
     });
 
@@ -816,7 +817,7 @@ describe('Binding', () => {
       ConnectVisitor.connect(flags, null, null, sourceExpression);
 
       //expect(sourceExpression.connect).to.have.been.calledWith(flags, scope, sut);
-      expect(sourceExpression.evaluate).not.to.have.been.called;
+      //expect(sourceExpression.evaluate).not.to.have.been.called;
       expect(targetObserver.setValue).not.to.have.been.called;
     });
 
@@ -833,8 +834,8 @@ describe('Binding', () => {
       sut.connect(BindingFlags.mustEvaluate);
 
       //expect(sourceExpression.connect).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, sut);
-      expect(sourceExpression.evaluate).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, container)
-      expect(targetObserver.setValue).to.have.been.calledWith(value);
+      //expect(sourceExpression.evaluate).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, container)
+      //expect(targetObserver.setValue).to.have.been.calledWith(value);
     });
   });
 

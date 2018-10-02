@@ -9,6 +9,7 @@ import {
 import { expect } from 'chai';
 import { spy, SinonSpy } from 'sinon';
 import { createScopeForTest } from './shared';
+import { EvaluateVisitor } from '../../../src/binding/evaluate-visitor';
 
 describe('AccessKeyed', () => {
   let expression: AccessKeyed;
@@ -19,13 +20,13 @@ describe('AccessKeyed', () => {
 
   it('evaluates member on bindingContext', () => {
     const scope: any = createScopeForTest({ foo: { bar: 'baz' } });
-    expect(expression.evaluate(0, scope, null)).to.equal('baz');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('baz');
   });
 
   it('evaluates member on overrideContext', () => {
     const scope: any = createScopeForTest({});
     scope.overrideContext.foo = { bar: 'baz' };
-    expect(expression.evaluate(0, scope, null)).to.equal('baz');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('baz');
   });
 
   it('assigns member on bindingContext', () => {
@@ -43,17 +44,17 @@ describe('AccessKeyed', () => {
 
   it('evaluates null/undefined object', () => {
     let scope: any = createScopeForTest({ foo: null });
-    expect(expression.evaluate(0, scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.be.undefined;
     scope = createScopeForTest({ foo: undefined });
-    expect(expression.evaluate(0, scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.be.undefined;
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.be.undefined;
   });
 
   it('does not observes property in keyed object access when key is number', () => {
     const scope: any = createScopeForTest({ foo: { '0': 'hello world' } });
     const expression = new AccessKeyed(new AccessScope('foo', 0), new PrimitiveLiteral(0));
-    expect(expression.evaluate(0, scope, null)).to.equal('hello world');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('hello world');
     const binding = { observeProperty: spy() };
     ConnectVisitor.connect(0, scope, <any>binding, expression);
     expect(binding.observeProperty.getCalls()[0]).to.have.been.calledWith(scope.bindingContext, 'foo');
@@ -64,7 +65,7 @@ describe('AccessKeyed', () => {
   it('does not observe property in keyed array access when key is number', () => {
     const scope: any = createScopeForTest({ foo: ['hello world'] });
     const expression = new AccessKeyed(new AccessScope('foo', 0), new PrimitiveLiteral(0));
-    expect(expression.evaluate(0, scope, null)).to.equal('hello world');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('hello world');
     const binding = { observeProperty: spy() };
     ConnectVisitor.connect(0, scope, <any>binding, expression);
     expect(binding.observeProperty).to.have.been.calledWith(scope.bindingContext, 'foo');
@@ -82,13 +83,13 @@ describe('AccessMember', () => {
 
   it('evaluates member on bindingContext', () => {
     const scope: any = createScopeForTest({ foo: { bar: 'baz' } });
-    expect(expression.evaluate(0, scope, null)).to.equal('baz');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('baz');
   });
 
   it('evaluates member on overrideContext', () => {
     const scope: any = createScopeForTest({});
     scope.overrideContext.foo = { bar: 'baz' };
-    expect(expression.evaluate(0, scope, null)).to.equal('baz');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('baz');
   });
 
   it('assigns member on bindingContext', () => {
@@ -121,7 +122,7 @@ describe('AccessScope', () => {
 
   it('evaluates undefined bindingContext', () => {
     const scope: any = { overrideContext: BindingContext.createOverride(undefined) };
-    expect(foo.evaluate(0, scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.be.undefined;
   });
 
   it('assigns undefined bindingContext', () => {
@@ -139,7 +140,7 @@ describe('AccessScope', () => {
 
   it('evaluates null bindingContext', () => {
     const scope: any = { overrideContext: BindingContext.createOverride(null), bindingContext: null };
-    expect(foo.evaluate(0, scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.be.undefined;
   });
 
   it('assigns null bindingContext', () => {
@@ -157,13 +158,13 @@ describe('AccessScope', () => {
 
   it('evaluates defined property on bindingContext', () => {
     const scope: any = createScopeForTest({ foo: 'bar' });
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
   });
 
   it('evaluates defined property on overrideContext', () => {
     const scope: any = createScopeForTest({ abc: 'xyz' });
     scope.overrideContext.foo = 'bar';
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
   });
 
   it('assigns defined property on bindingContext', () => {
@@ -209,15 +210,15 @@ describe('AccessScope', () => {
 
   it('evaluates defined property on first ancestor bindingContext', () => {
     const scope: any = createScopeForTest({ abc: 'xyz' }, { foo: 'bar' });
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
-    expect($parentfoo.evaluate(0, scope, null)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, $parentfoo)).to.equal('bar');
   });
 
   it('evaluates defined property on first ancestor overrideContext', () => {
     const scope: any = createScopeForTest({ abc: 'xyz' }, { def: 'rsw' });
     scope.overrideContext.parentOverrideContext.foo = 'bar';
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
-    expect($parentfoo.evaluate(0, scope, null)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, $parentfoo)).to.equal('bar');
   });
 
   it('assigns defined property on first ancestor bindingContext', () => {
@@ -280,48 +281,48 @@ describe('AccessThis', () => {
     const coc = BindingContext.createOverride;
 
     let scope = { overrideContext: coc(undefined) };
-    expect($parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(undefined, coc(undefined)) };
-    expect($parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(undefined, coc(undefined, coc(undefined))) };
-    expect($parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(undefined, coc(undefined, coc(undefined, coc(undefined)))) };
-    expect($parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
   });
 
   it('evaluates null bindingContext', () => {
     const coc = BindingContext.createOverride;
 
     let scope = { overrideContext: coc(null) };
-    expect($parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(null, coc(null)) };
-    expect($parent.evaluate(0, <any>scope, null)).to.equal(null);
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.equal(null);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(null, coc(null, coc(null))) };
-    expect($parent.evaluate(0, <any>scope, null)).to.equal(null);
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.equal(null);
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.equal(null);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.equal(null);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(null, coc(null, coc(null, coc(null)))) };
-    expect($parent.evaluate(0, <any>scope, null)).to.equal(null);
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.equal(null);
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.equal(null);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.equal(null);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.equal(null);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.equal(null);
   });
 
   it('evaluates defined bindingContext', () => {
@@ -331,24 +332,24 @@ describe('AccessThis', () => {
     const c = { c: 'c' };
     const d = { d: 'd' };
     let scope = { overrideContext: coc(a) };
-    expect($parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(a, coc(b)) };
-    expect($parent.evaluate(0, <any>scope, null)).to.equal(b);
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.equal(b);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(a, coc(b, coc(c))) };
-    expect($parent.evaluate(0, <any>scope, null)).to.equal(b);
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.equal(c);
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.equal(b);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.equal(c);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.be.undefined;
 
     scope = { overrideContext: coc(a, coc(b, coc(c, coc(d)))) };
-    expect($parent.evaluate(0, <any>scope, null)).to.equal(b);
-    expect($parent$parent.evaluate(0, <any>scope, null)).to.equal(c);
-    expect($parent$parent$parent.evaluate(0, <any>scope, null)).to.equal(d);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent)).to.equal(b);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent)).to.equal(c);
+    expect(EvaluateVisitor.evaluate(0, <any>scope, null, $parent$parent$parent)).to.equal(d);
   });
 });
 
@@ -366,45 +367,45 @@ describe('Binary', () => {
   it('concats strings', () => {
     let expression = new Binary('+', new PrimitiveLiteral('a'), new PrimitiveLiteral('b'));
     let scope: any = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal('ab');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('ab');
 
     expression = new Binary('+', new PrimitiveLiteral('a'), new PrimitiveLiteral(null));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal('anull');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('anull');
 
     expression = new Binary('+', new PrimitiveLiteral(null), new PrimitiveLiteral('b'));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal('nullb');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('nullb');
 
     expression = new Binary('+', new PrimitiveLiteral('a'), new PrimitiveLiteral(undefined));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal('aundefined');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('aundefined');
 
     expression = new Binary('+', new PrimitiveLiteral(undefined), new PrimitiveLiteral('b'));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal('undefinedb');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('undefinedb');
   });
 
   it('adds numbers', () => {
     let expression = new Binary('+', new PrimitiveLiteral(1), new PrimitiveLiteral(2));
     let scope: any = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal(3);
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal(3);
 
     expression = new Binary('+', new PrimitiveLiteral(1), new PrimitiveLiteral(null));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal(1);
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal(1);
 
     expression = new Binary('+', new PrimitiveLiteral(null), new PrimitiveLiteral(2));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.equal(2);
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal(2);
 
     expression = new Binary('+', new PrimitiveLiteral(1), new PrimitiveLiteral(undefined));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.be.NaN;
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.be.NaN;
 
     expression = new Binary('+', new PrimitiveLiteral(undefined), new PrimitiveLiteral(2));
     scope = createScopeForTest({});
-    expect(expression.evaluate(0, scope, null)).to.be.NaN;
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.be.NaN;
   });
 
   describe('performs \'in\'', () => {
@@ -428,7 +429,7 @@ describe('Binary', () => {
 
     for (const { expr, expected } of tests) {
       it(expr.toString(), () => {
-        expect(expr.evaluate(0, scope, null)).to.equal(expected);
+        expect(EvaluateVisitor.evaluate(0, scope, null, expr)).to.equal(expected);
       });
     }
   });
@@ -487,7 +488,7 @@ describe('Binary', () => {
 
     for (const { expr, expected } of tests) {
       it(expr.toString(), () => {
-        expect(expr.evaluate(0, scope, null)).to.equal(expected);
+        expect(EvaluateVisitor.evaluate(0, scope, null, expr)).to.equal(expected);
       });
     }
   });
@@ -499,24 +500,24 @@ describe('CallMember', () => {
     const bindingContext = { foo: { bar: () => 'baz' } };
     const scope: any = createScopeForTest(bindingContext);
     spy(bindingContext.foo, 'bar');
-    expect(expression.evaluate(0, scope, null)).to.equal('baz');
+    expect(EvaluateVisitor.evaluate(0, scope, null, expression)).to.equal('baz');
     expect((<any>bindingContext.foo.bar).callCount).to.equal(1);
   });
 
   it('evaluate handles null/undefined member', () => {
     const expression = new CallMember(new AccessScope('foo', 0), 'bar', []);
-    expect(expression.evaluate(0, createScopeForTest({ foo: {} }), null)).to.be.undefined;
-    expect(expression.evaluate(0, createScopeForTest({ foo: { bar: undefined } }), null)).to.be.undefined;
-    expect(expression.evaluate(0, createScopeForTest({ foo: { bar: null } }), null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, createScopeForTest({ foo: {} }), null, expression)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, createScopeForTest({ foo: { bar: undefined } }), null, expression)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, createScopeForTest({ foo: { bar: null } }), null, expression)).to.be.undefined;
   });
 
   it('evaluate throws when mustEvaluate and member is null or undefined', () => {
     const expression = new CallMember(new AccessScope('foo', 0), 'bar', []);
     const mustEvaluate = true;
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({}), null)).to.throw();
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: {} }), null)).to.throw();
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: { bar: undefined } }), null)).to.throw();
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: { bar: null } }), null)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, createScopeForTest({}), null, expression)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: {} }), null, expression)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: { bar: undefined } }), null, expression)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: { bar: null } }), null, expression)).to.throw();
   });
 });
 
@@ -533,15 +534,15 @@ describe('CallScope', () => {
 
   it('evaluates undefined bindingContext', () => {
     const scope: any = { overrideContext: BindingContext.createOverride(undefined) };
-    expect(foo.evaluate(0, scope, null)).to.be.undefined;
-    expect(hello.evaluate(0, scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, hello)).to.be.undefined;
   });
 
   it('throws when mustEvaluate and evaluating undefined bindingContext', () => {
     const scope: any = { overrideContext: BindingContext.createOverride(undefined) };
     const mustEvaluate = true;
-    expect(() => foo.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
-    expect(() => hello.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, scope, null, foo)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, scope, null, hello)).to.throw();
   });
 
   it('connects undefined bindingContext', () => {
@@ -555,15 +556,15 @@ describe('CallScope', () => {
 
   it('evaluates null bindingContext', () => {
     const scope: any = { overrideContext: BindingContext.createOverride(null), bindingContext: null };
-    expect(foo.evaluate(0, scope, null)).to.be.undefined;
-    expect(hello.evaluate(0, scope, null)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.be.undefined;
+    expect(EvaluateVisitor.evaluate(0, scope, null, hello)).to.be.undefined;
   });
 
   it('throws when mustEvaluate and evaluating null bindingContext', () => {
     const scope: any = { overrideContext: BindingContext.createOverride(null), bindingContext: null };
     const mustEvaluate = true;
-    expect(() => foo.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
-    expect(() => hello.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, scope, null, foo)).to.throw();
+    expect(() => EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, scope, null, hello)).to.throw();
   });
 
   it('connects null bindingContext', () => {
@@ -577,8 +578,8 @@ describe('CallScope', () => {
 
   it('evaluates defined property on bindingContext', () => {
     const scope: any = createScopeForTest({ foo: () => 'bar', hello: arg => arg, arg: 'world' });
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
-    expect(hello.evaluate(0, scope, null)).to.equal('world');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, hello)).to.equal('world');
   });
 
   it('evaluates defined property on overrideContext', () => {
@@ -586,8 +587,8 @@ describe('CallScope', () => {
     scope.overrideContext.foo = () => 'bar';
     scope.overrideContext.hello = arg => arg;
     scope.overrideContext.arg = 'world';
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
-    expect(hello.evaluate(0, scope, null)).to.equal('world');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, hello)).to.equal('world');
   });
 
   it('connects defined property on bindingContext', () => {
@@ -622,8 +623,8 @@ describe('CallScope', () => {
 
   it('evaluates defined property on first ancestor bindingContext', () => {
     const scope: any = createScopeForTest({ abc: 'xyz' }, { foo: () => 'bar', hello: arg => arg, arg: 'world' });
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
-    expect(hello.evaluate(0, scope, null)).to.equal('world');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, hello)).to.equal('world');
   });
 
   it('evaluates defined property on first ancestor overrideContext', () => {
@@ -631,8 +632,8 @@ describe('CallScope', () => {
     scope.overrideContext.parentOverrideContext.foo = () => 'bar';
     scope.overrideContext.parentOverrideContext.hello = arg => arg;
     scope.overrideContext.parentOverrideContext.arg = 'world';
-    expect(foo.evaluate(0, scope, null)).to.equal('bar');
-    expect(hello.evaluate(0, scope, null)).to.equal('world');
+    expect(EvaluateVisitor.evaluate(0, scope, null, foo)).to.equal('bar');
+    expect(EvaluateVisitor.evaluate(0, scope, null, hello)).to.equal('world');
   });
 
   it('connects defined property on first ancestor bindingContext', () => {
@@ -745,7 +746,7 @@ describe('LiteralTemplate', () => {
   for (const { expr, expected, ctx } of tests) {
     it(`evaluates ${expected}`, () => {
       const scope: any = createScopeForTest(ctx);
-      expect(expr.evaluate(0, scope, null)).to.equal(expected);
+      expect(EvaluateVisitor.evaluate(0, scope, null, expr)).to.equal(expected);
     });
   }
 });
@@ -769,7 +770,7 @@ describe('Unary', () => {
 
     for (const { expr, expected } of tests) {
       it(expr.toString(), () => {
-        expect(expr.evaluate(0, scope, null)).to.equal(expected);
+        expect(EvaluateVisitor.evaluate(0, scope, null, expr)).to.equal(expected);
       });
     }
   });
@@ -792,7 +793,7 @@ describe('Unary', () => {
 
     for (const { expr } of tests) {
       it(expr.toString(), () => {
-        expect(expr.evaluate(0, scope, null)).to.be.undefined;
+        expect(EvaluateVisitor.evaluate(0, scope, null, expr)).to.be.undefined;
       });
     }
 
@@ -801,7 +802,7 @@ describe('Unary', () => {
       const foo = () => (fooCalled = true);
       scope = createScopeForTest({ foo });
       const expr = new Unary('void', new CallScope('foo', [], 0));
-      expect(expr.evaluate(0, scope, null)).to.be.undefined;
+      expect(EvaluateVisitor.evaluate(0, scope, null, expr)).to.be.undefined;
       expect(fooCalled).to.equal(true);
     });
   });

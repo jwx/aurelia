@@ -9,6 +9,7 @@ import { BindingFlags } from './binding-flags';
 import { Collection } from './observation';
 import { ISignaler } from './signaler';
 import { ValueConverterResource } from './value-converter';
+import { EvaluateVisitor } from './evaluate-visitor';
 
 export type IsPrimary = AccessThis | AccessScope | ArrayLiteral | ObjectLiteral | PrimitiveLiteral | Template;
 export type IsUnary = IsPrimary | Unary;
@@ -49,7 +50,6 @@ export interface IVisitor<T = any> {
 
 export interface IExpression {
   readonly $kind: ExpressionKind;
-  evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator | null): any;
   accept<T = any>(visitor: IVisitor<T>): T;
   assign?(flags: BindingFlags, scope: IScope, locator: IServiceLocator | null, value: any): any;
   bind?(flags: BindingFlags, scope: IScope, binding: IBinding): void;
@@ -108,10 +108,6 @@ export class BindingBehavior implements IExpression {
     }
   }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    return this.expression.evaluate(flags, scope, locator);
-  }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
     return (<any>this.expression).assign(flags, scope, locator, value);
   }
@@ -154,24 +150,6 @@ export class ValueConverter implements IExpression {
     this.converterKey = ValueConverterResource.keyFrom(this.name);
   }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const converter = locator.get(this.converterKey);
-    if (!converter) {
-      throw new Error(`No ValueConverter named "${this.name}" was found!`);
-    }
-    if ('toView' in converter) {
-      const args = this.args;
-      const len = args.length;
-      const result = Array(len + 1);
-      result[0] = this.expression.evaluate(flags, scope, locator);
-      for (let i = 0; i < len; ++i) {
-        result[i + 1] = args[i].evaluate(flags, scope, locator);
-      }
-      return (<any>converter).toView.apply(converter, result);
-    }
-    return this.expression.evaluate(flags, scope, locator);
-  }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
     const converter = locator.get(this.converterKey);
     if (!converter) {
@@ -205,10 +183,6 @@ export class Assign implements IExpression {
   public $kind: ExpressionKind;
   constructor(public target: IsAssignable, public value: IsAssign) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    return this.target.assign(flags, scope, locator, this.value.evaluate(flags, scope, locator));
-  }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
     (<any>this.value).assign(flags, scope, locator, value);
     this.target.assign(flags, scope, locator, value);
@@ -224,12 +198,6 @@ export class Conditional implements IExpression {
   public assign: IExpression['assign'];
   constructor(public condition: IExpression, public yes: IExpression, public no: IExpression) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    return (!!this.condition.evaluate(flags, scope, locator))
-      ? this.yes.evaluate(flags, scope, locator)
-      : this.no.evaluate(flags, scope, locator);
-  }
-
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitConditional(this);
   }
@@ -240,15 +208,6 @@ export class AccessThis implements IExpression {
   public assign: IExpression['assign'];
   constructor(public ancestor: number = 0) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    let oc = scope.overrideContext;
-    let i = this.ancestor;
-    while (i-- && oc) {
-      oc = oc.parentOverrideContext;
-    }
-    return i < 1 && oc ? oc.bindingContext : undefined;
-  }
-
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitAccessThis(this);
   }
@@ -257,11 +216,6 @@ export class AccessThis implements IExpression {
 export class AccessScope implements IExpression {
   public $kind: ExpressionKind;
   constructor(public name: string, public ancestor: number = 0) { }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const name = this.name;
-    return BindingContext.get(scope, name, this.ancestor)[name];
-  }
 
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
     const name = this.name;
@@ -278,13 +232,8 @@ export class AccessMember implements IExpression {
   public $kind: ExpressionKind;
   constructor(public object: IExpression, public name: string) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const instance = this.object.evaluate(flags, scope, locator);
-    return instance === null || instance === undefined ? instance : instance[this.name];
-  }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
-    let instance = this.object.evaluate(flags, scope, locator);
+    let instance = EvaluateVisitor.evaluate(flags, scope, locator, this.object);
     if (instance === null || typeof instance !== 'object') {
       instance = {};
       this.object.assign(flags, scope, locator, instance);
@@ -302,20 +251,9 @@ export class AccessKeyed implements IExpression {
   public $kind: ExpressionKind;
   constructor(public object: IExpression, public key: IExpression) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const instance = this.object.evaluate(flags, scope, locator);
-    if (instance === null || instance === undefined) {
-      return undefined;
-    }
-    const key = this.key.evaluate(flags, scope, locator);
-    // note: getKeyed and setKeyed are removed because they are identical to the default spec behavior
-    // and the runtime does this this faster
-    return instance[key];
-  }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any | null): any {
-    const instance = this.object.evaluate(flags, scope, locator);
-    const key = this.key.evaluate(flags, scope, locator);
+    const instance = EvaluateVisitor.evaluate(flags, scope, locator, this.object);
+    const key = EvaluateVisitor.evaluate(flags, scope, locator, this.key);
     return instance[key] = value;
   }
 
@@ -329,16 +267,6 @@ export class CallScope implements IExpression {
   public assign: IExpression['assign'];
   constructor(public name: string, public args: ReadonlyArray<IExpression>, public ancestor: number = 0) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator | null): any {
-    const args = evalList(flags, scope, locator, this.args);
-    const context = BindingContext.get(scope, this.name, this.ancestor);
-    const func = getFunction(flags, context, this.name);
-    if (func) {
-      return func.apply(context, args);
-    }
-    return undefined;
-  }
-
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitCallScope(this);
   }
@@ -348,16 +276,6 @@ export class CallMember implements IExpression {
   public $kind: ExpressionKind;
   public assign: IExpression['assign'];
   constructor(public object: IExpression, public name: string, public args: ReadonlyArray<IExpression>) { }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const instance = this.object.evaluate(flags, scope, locator);
-    const args = evalList(flags, scope, locator, this.args);
-    const func = getFunction(flags, instance, this.name);
-    if (func) {
-      return func.apply(instance, args);
-    }
-    return undefined;
-  }
 
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitCallMember(this);
@@ -369,17 +287,6 @@ export class CallFunction implements IExpression {
   public assign: IExpression['assign'];
   constructor(public func: IExpression, public args: IExpression[]) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const func = this.func.evaluate(flags, scope, locator);
-    if (typeof func === 'function') {
-      return func.apply(null, evalList(flags, scope, locator, this.args));
-    }
-    if (!(flags & BindingFlags.mustEvaluate) && (func === null || func === undefined)) {
-      return undefined;
-    }
-    throw new Error(`${this.func} is not a function`);
-  }
-
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitCallFunction(this);
   }
@@ -389,78 +296,6 @@ export class Binary implements IExpression {
   public $kind: ExpressionKind;
   public assign: IExpression['assign'];
   constructor(public operation: string, public left: IExpression, public right: IExpression) {
-    // what we're doing here is effectively moving the large switch statement from evaluate to the constructor
-    // so that the check only needs to be done once, and evaluate (which is called many times) will have a lot less
-    // work to do; we can do this because the operation can't change after it's parsed
-    this.evaluate = this[operation];
-  }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {}
-
-  private ['&&'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) && this.right.evaluate(f, s, l);
-  }
-  private ['||'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) || this.right.evaluate(f, s, l);
-  }
-  private ['=='](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    // tslint:disable-next-line:triple-equals
-    return this.left.evaluate(f, s, l) == this.right.evaluate(f, s, l);
-  }
-  private ['==='](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) === this.right.evaluate(f, s, l);
-  }
-  private ['!='](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    // tslint:disable-next-line:triple-equals
-    return this.left.evaluate(f, s, l) != this.right.evaluate(f, s, l);
-  }
-  private ['!=='](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) !== this.right.evaluate(f, s, l);
-  }
-  private ['instanceof'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    const right = this.right.evaluate(f, s, l);
-    if (typeof right === 'function') {
-      return this.left.evaluate(f, s, l) instanceof right;
-    }
-    return false;
-  }
-  private ['in'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    const right = this.right.evaluate(f, s, l);
-    if (right !== null && typeof right === 'object') {
-      return this.left.evaluate(f, s, l) in right;
-    }
-    return false;
-  }
-  // note: autoConvertAdd (and the null check) is removed because the default spec behavior is already largely similar
-  // and where it isn't, you kind of want it to behave like the spec anyway (e.g. return NaN when adding a number to undefined)
-  // this makes bugs in user code easier to track down for end users
-  // also, skipping these checks and leaving it to the runtime is a nice little perf boost and simplifies our code
-  private ['+'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) + this.right.evaluate(f, s, l);
-  }
-  private ['-'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) - this.right.evaluate(f, s, l);
-  }
-  private ['*'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) * this.right.evaluate(f, s, l);
-  }
-  private ['/'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) / this.right.evaluate(f, s, l);
-  }
-  private ['%'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) % this.right.evaluate(f, s, l);
-  }
-  private ['<'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) < this.right.evaluate(f, s, l);
-  }
-  private ['>'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) > this.right.evaluate(f, s, l);
-  }
-  private ['<='](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) <= this.right.evaluate(f, s, l);
-  }
-  private ['>='](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return this.left.evaluate(f, s, l) >= this.right.evaluate(f, s, l);
   }
 
   // tslint:disable-next-line:member-ordering
@@ -472,30 +307,6 @@ export class Binary implements IExpression {
 export class Unary {
   public $kind: ExpressionKind;
   constructor(public operation: 'void' | 'typeof' | '!' | '-' | '+', public expression: IsLeftHandSide) {
-    // see Binary (we're doing the same thing here)
-    this.evaluate = this[operation];
-  }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {}
-
-  public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, value: any): any {
-    throw new Error(`Binding expression "${this}" cannot be assigned to.`);
-  }
-
-  private ['void'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return void this.expression.evaluate(f, s, l);
-  }
-  private ['typeof'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return typeof this.expression.evaluate(f, s, l);
-  }
-  private ['!'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return !this.expression.evaluate(f, s, l);
-  }
-  private ['-'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return -this.expression.evaluate(f, s, l);
-  }
-  private ['+'](f: BindingFlags, s: IScope, l: IServiceLocator): any {
-    return +this.expression.evaluate(f, s, l);
   }
 
   // tslint:disable-next-line:member-ordering
@@ -509,10 +320,6 @@ export class PrimitiveLiteral implements IExpression {
   public assign: IExpression['assign'];
   constructor(public value: any) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    return this.value;
-  }
-
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitPrimitiveLiteral(this);
   }
@@ -522,19 +329,6 @@ export class HtmlLiteral implements IExpression {
   public $kind: ExpressionKind;
   public assign: IExpression['assign'];
   constructor(public parts: IExpression[]) { }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const elements = this.parts;
-    let result = '';
-    for (let i = 0, ii = elements.length; i < ii; ++i) {
-      const value = elements[i].evaluate(flags, scope, locator);
-      if (value === undefined || value === null) {
-        continue;
-      }
-      result += value;
-    }
-    return result;
-  }
 
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitHtmlLiteral(this);
@@ -546,16 +340,6 @@ export class ArrayLiteral implements IExpression {
   public assign: IExpression['assign'];
   constructor(public elements: IExpression[]) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any[] {
-    const elements = this.elements;
-    const length = elements.length;
-    const result = Array(length);
-    for (let i = 0; i < length; ++i) {
-      result[i] = elements[i].evaluate(flags, scope, locator);
-    }
-    return result;
-  }
-
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitArrayLiteral(this);
   }
@@ -565,16 +349,6 @@ export class ObjectLiteral implements IExpression {
   public $kind: ExpressionKind;
   public assign: IExpression['assign'];
   constructor(public keys: (number | string)[], public values: IExpression[]) { }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    const instance: Record<string, any> = {};
-    const keys = this.keys;
-    const values = this.values;
-    for (let i = 0, ii = keys.length; i < ii; ++i) {
-      instance[keys[i]] = values[i].evaluate(flags, scope, locator);
-    }
-    return instance;
-  }
 
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitObjectLiteral(this);
@@ -586,17 +360,6 @@ export class Template implements IExpression {
   public assign: IExpression['assign'];
   constructor(public cooked: string[], public expressions?: IsAssign[]) {
     this.expressions = expressions || [];
-  }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): string {
-    const expressions = this.expressions;
-    const cooked = this.cooked;
-    let result = cooked[0];
-    for (let i = 0, ii = expressions.length; i < ii; ++i) {
-      result += expressions[i].evaluate(flags, scope, locator);
-      result += cooked[i + 1];
-    }
-    return result;
   }
 
   public accept<T>(visitor: IVisitor<T>): T {
@@ -616,20 +379,6 @@ export class TaggedTemplate implements IExpression {
     this.expressions = expressions || [];
   }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): string {
-    const expressions = this.expressions;
-    const len = expressions.length;
-    const results = Array(len);
-    for (let i = 0, ii = len; i < ii; ++i) {
-      results[i] = expressions[i].evaluate(flags, scope, locator);
-    }
-    const func = this.func.evaluate(flags, scope, locator);
-    if (typeof func !== 'function') {
-      throw new Error(`${this.func} is not a function`);
-    }
-    return func.apply(null, [this.cooked].concat(results));
-  }
-
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitTaggedTemplate(this);
   }
@@ -641,10 +390,6 @@ export class ArrayBindingPattern implements IExpression {
   constructor(
     public elements: IsAssign[]
   ) { }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    // TODO
-  }
 
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, obj: any): any {
     // TODO
@@ -663,10 +408,6 @@ export class ObjectBindingPattern implements IExpression {
     public values: IsAssign[]
   ) { }
 
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    // TODO
-  }
-
   public assign(flags: BindingFlags, scope: IScope, locator: IServiceLocator, obj: any): any {
     // TODO
   }
@@ -681,10 +422,6 @@ export class BindingIdentifier implements IExpression {
   public name: string;
   constructor(name: string) {
     this.name = name;
-  }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    return this.name;
   }
 
   public accept<T>(visitor: IVisitor<T>): T {
@@ -705,10 +442,6 @@ export class ForOfStatement implements IExpression {
   constructor(declaration: BindingIdentifierOrPattern, iterable: IsBindingBehavior) {
     this.declaration = declaration;
     this.iterable = iterable;
-  }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): any {
-    return this.iterable.evaluate(flags, scope, locator);
   }
 
   public count(result: any): number {
@@ -733,17 +466,6 @@ export class Interpolation implements IExpression {
   public $kind: ExpressionKind;
   public assign: IExpression['assign'];
   constructor(public parts: string[], public expressions: IExpression[]) { }
-
-  public evaluate(flags: BindingFlags, scope: IScope, locator: IServiceLocator): string {
-    const expressions = this.expressions;
-    const parts = this.parts;
-    let result = parts[0];
-    for (let i = 0, ii = expressions.length; i < ii; ++i) {
-      result += expressions[i].evaluate(flags, scope, locator);
-      result += parts[i + 1];
-    }
-    return result;
-  }
 
   public accept<T>(visitor: IVisitor<T>): T {
     return visitor.visitInterpolation(this);
@@ -788,21 +510,11 @@ function evalList(flags: BindingFlags, scope: IScope, locator: IServiceLocator, 
   const len = list.length;
   const result = Array(len);
   for (let i = 0; i < len; ++i) {
-    result[i] = list[i].evaluate(flags, scope, locator);
+    result[i] = EvaluateVisitor.evaluate(flags, scope, locator, list[i]);
   }
   return result;
 }
 
-function getFunction(flags: BindingFlags, obj: any, name: string): any {
-  const func = obj === null || obj === undefined ? null : obj[name];
-  if (typeof func === 'function') {
-    return func;
-  }
-  if (!(flags & BindingFlags.mustEvaluate) && (func === null || func === undefined)) {
-    return null;
-  }
-  throw new Error(`${name} is not a function`);
-}
 
 /*@internal*/
 export const IterateForOfStatement = {
@@ -856,5 +568,5 @@ export const CountForOfStatement = {
 const ast = [AccessThis, AccessScope, ArrayLiteral, ObjectLiteral, PrimitiveLiteral, Template, Unary, CallFunction, CallMember, CallScope, AccessMember, AccessKeyed, TaggedTemplate, Binary, Conditional, Assign];
 for (let i = 0, ii = ast.length; i < ii; ++i) {
   const proto = ast[i].prototype;
-  proto.assign = proto.assign || PLATFORM.noop;
+  proto['assign'] = proto['assign'] || PLATFORM.noop;
 }

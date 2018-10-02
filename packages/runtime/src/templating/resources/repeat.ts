@@ -1,5 +1,6 @@
 import { inject } from '@aurelia/kernel';
 import { Binding, BindingContext, BindingFlags, CollectionObserver, ForOfStatement, getCollectionObserver, IBatchedCollectionSubscriber, IChangeSet, IObservedArray, IScope, ObservedCollection, SetterObserver } from '../../binding';
+import { EvaluateVisitor } from '../../binding/evaluate-visitor';
 import { INode, IRenderLocation } from '../../dom';
 import { bindable } from '../bindable';
 import { ICustomAttribute, templateController } from '../custom-attribute';
@@ -39,7 +40,7 @@ export class Repeat<T extends ObservedCollection = IObservedArray> {
 
   public bound(flags: BindingFlags): void {
     this.forOf = (<Binding[]>this.renderable.$bindables).find(b => b.target === this).sourceExpression as ForOfStatement;
-    this.local = this.forOf.declaration.evaluate(flags, this.$scope, null);
+    this.local = EvaluateVisitor.evaluate(flags, this.$scope, null, this.forOf.declaration);
 
     this.processViews(null, flags);
     this.checkCollectionObserver();
@@ -117,7 +118,7 @@ export class Repeat<T extends ObservedCollection = IObservedArray> {
           if (!!view.$scope && view.$scope.bindingContext[local] === item) {
             view.$bind(flags, BindingContext.createScopeFromParent($scope, view.$scope.bindingContext));
           } else {
-            view.$bind(flags, BindingContext.createScopeFromParent($scope, { [local]: item }))
+            view.$bind(flags, BindingContext.createScopeFromParent($scope, { [local]: item }));
           }
         });
       } else {
@@ -126,7 +127,7 @@ export class Repeat<T extends ObservedCollection = IObservedArray> {
           if (indexMap[i] === i) {
             view.$bind(flags, BindingContext.createScopeFromParent($scope, view.$scope.bindingContext));
           } else {
-            view.$bind(flags, BindingContext.createScopeFromParent($scope, { [local]: item }))
+            view.$bind(flags, BindingContext.createScopeFromParent($scope, { [local]: item }));
           }
         });
       }

@@ -4,6 +4,7 @@ import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { BindingMode } from './binding-mode';
 import { ConnectVisitor } from './connect-visitor';
+import { EvaluateVisitor } from './evaluate-visitor';
 import { AccessorOrObserver, IBindingTargetObserver, IBindScope, IPropertySubscriber, ISubscribable, MutationKind } from './observation';
 import { IObserverLocator } from './observer-locator';
 
@@ -77,7 +78,7 @@ export class Binding implements IBinding, IPropertySubscriber {
       const mode = this.mode;
 
       previousValue = targetObserver.getValue();
-      newValue = sourceExpression.evaluate(flags, $scope, locator);
+      newValue = EvaluateVisitor.evaluate(flags, $scope, locator, sourceExpression);
       if (newValue !== previousValue) {
         targetObserver.setValue(newValue, flags);
       }
@@ -90,7 +91,7 @@ export class Binding implements IBinding, IPropertySubscriber {
     }
 
     if (flags & BindingFlags.updateSourceExpression) {
-      if (newValue !== sourceExpression.evaluate(flags, $scope, locator)) {
+      if (newValue !== EvaluateVisitor.evaluate(flags, $scope, locator, sourceExpression)) {
         sourceExpression.assign(flags, $scope, locator, newValue);
       }
       return;
@@ -131,7 +132,7 @@ export class Binding implements IBinding, IPropertySubscriber {
     // during bind, binding behavior might have changed sourceExpression
     sourceExpression = this.sourceExpression;
     if (mode & toViewOrOneTime) {
-      targetObserver.setValue(sourceExpression.evaluate(flags, scope, this.locator), flags);
+      targetObserver.setValue(EvaluateVisitor.evaluate(flags, scope, this.locator, sourceExpression), flags);
     }
     if (mode & toView) {
       ConnectVisitor.connect(flags, scope, this);
@@ -172,7 +173,7 @@ export class Binding implements IBinding, IPropertySubscriber {
     const $scope = this.$scope;
 
     if (flags & BindingFlags.mustEvaluate) {
-      const value = sourceExpression.evaluate(flags, $scope, this.locator);
+      const value = EvaluateVisitor.evaluate(flags, $scope, this.locator, sourceExpression);
       this.targetObserver.setValue(value, flags);
     }
 

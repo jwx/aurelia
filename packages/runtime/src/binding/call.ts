@@ -4,6 +4,7 @@ import { IExpression } from './ast';
 import { IBinding } from './binding';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
+import { EvaluateVisitor } from './evaluate-visitor';
 import { IAccessor } from './observation';
 import { IObserverLocator } from './observer-locator';
 
@@ -24,7 +25,7 @@ export class Call implements IBinding {
   public callSource(args: IIndexable): Primitive | IIndexable {
     const overrideContext = this.$scope.overrideContext;
     Object.assign(overrideContext, args);
-    const result = this.sourceExpression.evaluate(BindingFlags.mustEvaluate, this.$scope, this.locator);
+    const result = EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, this.$scope, this.locator, this.sourceExpression);
 
     for (const prop in args) {
       delete overrideContext[prop];

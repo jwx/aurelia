@@ -3,6 +3,7 @@ import { AccessKeyed, AccessMember, AccessScope, AccessThis, ArrayBindingPattern
 import { Binding } from './binding';
 import { BindingContext, IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
+import { EvaluateVisitor } from './evaluate-visitor';
 import { ISignaler } from './signaler';
 
 // tslint:disable:no-this-assignment
@@ -30,11 +31,11 @@ export class ConnectVisitor implements IVisitor {
   }
 
   public visitAccessKeyed(expr: AccessKeyed): boolean {
-    const obj = expr.object.evaluate(this.flags, this.scope, null);
+    const obj = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.object);
     expr.object.accept(this);
     if (typeof obj === 'object' && obj !== null) {
       expr.key.accept(this);
-      const key = expr.key.evaluate(this.flags, this.scope, null);
+      const key = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.key);
       // observe the property represented by the key as long as it's not an array indexer
       // (note: string indexers behave the same way as numeric indexers as long as they represent numbers)
       if (!(Array.isArray(obj) && isNumeric(key))) {
@@ -44,7 +45,7 @@ export class ConnectVisitor implements IVisitor {
     return true;
   }
   public visitAccessMember(expr: AccessMember): boolean {
-    const obj = expr.object.evaluate(this.flags, this.scope, null);
+    const obj = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.object);
     expr.object.accept(this);
     if (obj) {
       this.binding.observeProperty(obj, expr.name);
@@ -70,7 +71,7 @@ export class ConnectVisitor implements IVisitor {
     return true;
   }
   public visitBinary(expr: Binary): boolean {
-    const left = expr.left.evaluate(this.flags, this.scope, null);
+    const left = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.left);
     expr.left.accept(this);
     if (expr.operation === '&&' && !left || expr.operation === '||' && left) {
       return true;
@@ -86,7 +87,7 @@ export class ConnectVisitor implements IVisitor {
     return true;
   }
   public visitCallFunction(expr: CallFunction): boolean {
-    const func = expr.func.evaluate(this.flags, this.scope, null);
+    const func = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.func);
     expr.func.accept(this);
     if (typeof func === 'function') {
       this.visitList(expr.args);
@@ -94,7 +95,7 @@ export class ConnectVisitor implements IVisitor {
     return true;
   }
   public visitCallMember(expr: CallMember): boolean {
-    const obj = expr.object.evaluate(this.flags, this.scope, null);
+    const obj = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.object);
     expr.object.accept(this);
     if (getFunction(this.flags & ~BindingFlags.mustEvaluate, obj, expr.name)) {
       this.visitList(expr.args);
@@ -106,7 +107,7 @@ export class ConnectVisitor implements IVisitor {
     return true;
   }
   public visitConditional(expr: Conditional): boolean {
-    if (expr.condition.evaluate(this.flags, this.scope, null)) {
+    if (EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.condition)) {
       expr.yes.accept(this);
     } else {
       expr.no.accept(this);

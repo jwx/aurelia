@@ -50,7 +50,7 @@ describe('Call', () => {
           massSpy(scope.bindingContext, 'theFunc');
           massSpy(sut, 'callSource');
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate', 'assign');
+          massSpy(expr, 'assign');
           expr['bind'] = spy();
           expr['unbind'] = spy();
 
@@ -129,7 +129,7 @@ describe('Call', () => {
           massSpy(scope.bindingContext, 'theFunc');
           massSpy(sut, 'callSource');
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate', 'assign');
+          massSpy(expr, 'assign');
           expr['bind'] = spy();
           expr['unbind'] = spy();
 
@@ -221,7 +221,7 @@ describe('Call', () => {
           massSpy(scope.bindingContext, 'theFunc');
           massSpy(sut, 'callSource');
           massSpy(targetObserver, 'setValue', 'getValue');
-          massSpy(expr, 'evaluate', 'assign');
+          massSpy(expr, 'assign');
 
           // - Act -
           sut.$bind(flags, scope);
@@ -246,7 +246,7 @@ describe('Call', () => {
 
           // - Assert -
           expect((<SinonSpy>sut.callSource).getCalls()[0].args[0]).to.deep.equal(args);
-          expect(expr.evaluate).to.have.been.calledOnce;
+          //expect(expr.evaluate).to.have.been.calledOnce;
           expect(target[prop]).to.have.been.calledOnce;
           if (expr['args'].length === 3) {
             expect(scope.bindingContext['theFunc']).to.have.been.calledWithExactly(args[expr['args'][0].name], args[expr['args'][1].name], args[expr['args'][2].name]);

@@ -6,6 +6,7 @@ import { IExpression } from './ast';
 import { IBinding } from './binding';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
+import { EvaluateVisitor } from './evaluate-visitor';
 import { DelegationStrategy, IEventManager } from './event-manager';
 
 export class Listener implements IBinding {
@@ -27,7 +28,7 @@ export class Listener implements IBinding {
     const overrideContext = this.source.overrideContext as any;
     overrideContext['$event'] = event;
 
-    const result = this.sourceExpression.evaluate(BindingFlags.mustEvaluate, this.source, this.locator);
+    const result = EvaluateVisitor.evaluate(BindingFlags.mustEvaluate, this.source, this.locator, this.sourceExpression);
 
     delete overrideContext['$event'];
 

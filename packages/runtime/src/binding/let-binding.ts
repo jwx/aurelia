@@ -4,8 +4,9 @@ import { Binding } from './binding';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
 import { BindingMode } from './binding-mode';
-import { IObserverLocator } from './observer-locator';
 import { ConnectVisitor } from './connect-visitor';
+import { EvaluateVisitor } from './evaluate-visitor';
+import { IObserverLocator } from './observer-locator';
 
 // BindingMode is not a const enum (and therefore not inlined), so assigning them to a variable to save a member accessor is a minor perf tweak
 const { toView } = BindingMode;
@@ -51,7 +52,7 @@ export class LetBinding extends Binding {
 
     if (flags & BindingFlags.updateTargetInstance) {
       const currValue = target[targetProperty];
-      const newValue = sourceExpression.evaluate(flags, $scope, locator);
+      const newValue = EvaluateVisitor.evaluate(flags, $scope, locator, sourceExpression);
       if (newValue !== currValue) {
         target[targetProperty] = newValue;
       }
@@ -78,7 +79,7 @@ export class LetBinding extends Binding {
       sourceExpression.bind(flags, scope, this);
     }
     // sourceExpression might have been changed during bind
-    this.target[this.targetProperty] = this.sourceExpression.evaluate(BindingFlags.fromBind, scope, this.locator);
+    this.target[this.targetProperty] = EvaluateVisitor.evaluate(BindingFlags.fromBind, scope, this.locator, this.sourceExpression);
 
     const mode = this.mode;
     if ((mode & toView) !== toView) {
@@ -109,7 +110,7 @@ export class LetBinding extends Binding {
     const sourceExpression = this.sourceExpression;
     const $scope = this.$scope;
 
-    const value = sourceExpression.evaluate(flags, $scope, this.locator);
+    const value = EvaluateVisitor.evaluate(flags, $scope, this.locator, sourceExpression);
     // Let binding should initialize on their own
     // not waiting to be intied
     this.target[this.targetProperty] = value;

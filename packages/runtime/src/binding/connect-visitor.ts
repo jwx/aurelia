@@ -7,7 +7,8 @@ import { EvaluateVisitor } from './evaluate-visitor';
 import { ISignaler } from './signaler';
 
 // tslint:disable:no-this-assignment
-export class ConnectVisitor implements IVisitor {
+// tslint:disable:no-empty
+export class ConnectVisitor implements IVisitor<void> {
   private static cache: ConnectVisitor[] = [];
   public flags: BindingFlags;
   public scope: IScope;
@@ -30,7 +31,7 @@ export class ConnectVisitor implements IVisitor {
     this.cache.push(visitor);
   }
 
-  public visitAccessKeyed(expr: AccessKeyed): boolean {
+  public visitAccessKeyed(expr: AccessKeyed): void {
     const obj = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.object);
     expr.object.accept(this);
     if (typeof obj === 'object' && obj !== null) {
@@ -42,116 +43,110 @@ export class ConnectVisitor implements IVisitor {
         this.binding.observeProperty(obj, key);
       }
     }
-    return true;
   }
-  public visitAccessMember(expr: AccessMember): boolean {
+
+  public visitAccessMember(expr: AccessMember): void {
     const obj = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.object);
     expr.object.accept(this);
     if (obj) {
       this.binding.observeProperty(obj, expr.name);
     }
-    return true;
   }
-  public visitAccessScope(expr: AccessScope): boolean {
+
+  public visitAccessScope(expr: AccessScope): void {
     const context = BindingContext.get(this.scope, expr.name, expr.ancestor);
     this.binding.observeProperty(context, expr.name);
-    return true;
   }
-  public visitAccessThis(expr: AccessThis): boolean {
-    return true;
-  }
-  public visitArrayBindingPattern(expr: ArrayBindingPattern): boolean {
-    return true;
-  }
-  public visitArrayLiteral(expr: ArrayLiteral): boolean {
+
+  public visitAccessThis(expr: AccessThis): void { }
+
+  public visitArrayBindingPattern(expr: ArrayBindingPattern): void { }
+
+  public visitArrayLiteral(expr: ArrayLiteral): void {
     this.visitList(expr.elements);
-    return true;
   }
-  public visitAssign(expr: Assign): boolean {
-    return true;
-  }
-  public visitBinary(expr: Binary): boolean {
+
+  public visitAssign(expr: Assign): void { }
+
+  public visitBinary(expr: Binary): void {
     const left = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.left);
     expr.left.accept(this);
     if (expr.operation === '&&' && !left || expr.operation === '||' && left) {
-      return true;
+      return;
     }
     expr.right.accept(this);
-    return true;
   }
-  public visitBindingBehavior(expr: BindingBehavior): boolean {
+
+  public visitBindingBehavior(expr: BindingBehavior): void {
     expr.expression.accept(this);
-    return true;
   }
-  public visitBindingIdentifier(expr: BindingIdentifier): boolean {
-    return true;
-  }
-  public visitCallFunction(expr: CallFunction): boolean {
+
+  public visitBindingIdentifier(expr: BindingIdentifier): void { }
+
+  public visitCallFunction(expr: CallFunction): void {
     const func = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.func);
     expr.func.accept(this);
     if (typeof func === 'function') {
       this.visitList(expr.args);
     }
-    return true;
   }
-  public visitCallMember(expr: CallMember): boolean {
+
+  public visitCallMember(expr: CallMember): void {
     const obj = EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.object);
     expr.object.accept(this);
     if (getFunction(this.flags & ~BindingFlags.mustEvaluate, obj, expr.name)) {
       this.visitList(expr.args);
     }
-    return true;
   }
-  public visitCallScope(expr: CallScope): boolean {
+
+  public visitCallScope(expr: CallScope): void {
     this.visitList(expr.args);
-    return true;
   }
-  public visitConditional(expr: Conditional): boolean {
+
+  public visitConditional(expr: Conditional): void {
     if (EvaluateVisitor.evaluate(this.flags, this.scope, null, expr.condition)) {
       expr.yes.accept(this);
     } else {
       expr.no.accept(this);
     }
     expr.condition.accept(this);
-    return true;
   }
-  public visitForOfStatement(expr: ForOfStatement): boolean {
+
+  public visitForOfStatement(expr: ForOfStatement): void {
     expr.declaration.accept(this);
     expr.iterable.accept(this);
-    return true;
   }
-  public visitHtmlLiteral(expr: HtmlLiteral): boolean {
+
+  public visitHtmlLiteral(expr: HtmlLiteral): void {
     this.visitList(expr.parts);
-    return true;
   }
-  public visitInterpolation(expr: Interpolation): boolean {
+
+  public visitInterpolation(expr: Interpolation): void {
     this.visitList(expr.expressions);
-    return true;
   }
-  public visitObjectBindingPattern(expr: ObjectBindingPattern): boolean {
-    return true;
-  }
-  public visitObjectLiteral(expr: ObjectLiteral): boolean {
+
+  public visitObjectBindingPattern(expr: ObjectBindingPattern): void { }
+
+  public visitObjectLiteral(expr: ObjectLiteral): void {
     this.visitList(expr.values);
-    return true;
   }
-  public visitPrimitiveLiteral(expr: PrimitiveLiteral): boolean {
-    return true;
-  }
-  public visitTaggedTemplate(expr: TaggedTemplate): boolean {
+
+  public visitPrimitiveLiteral(expr: PrimitiveLiteral): void { }
+
+  public visitTaggedTemplate(expr: TaggedTemplate): void {
     this.visitList(expr.expressions);
     expr.func.accept(this);
-    return true;
   }
-  public visitTemplate(expr: Template): boolean {
+
+  public visitTemplate(expr: Template): void {
     this.visitList(expr.expressions);
-    return true;
   }
-  public visitUnary(expr: Unary): boolean {
+
+  public visitUnary(expr: Unary): void {
     expr.expression.accept(this);
-    return true;
   }
-  public visitValueConverter(expr: ValueConverter): boolean {
+
+  public visitValueConverter(expr: ValueConverter): void {
     const locator = this.binding.locator;
     const converter = locator.get(expr.converterKey) as ISignaler;
     if (!converter) {
@@ -168,7 +163,6 @@ export class ConnectVisitor implements IVisitor {
     for (let i = 0, ii = signals.length; i < ii; ++i) {
       signaler.addSignalListener(signals[i], this.binding);
     }
-    return true;
   }
 
   private visitList(elements: ArrayLike<IExpression>): void {

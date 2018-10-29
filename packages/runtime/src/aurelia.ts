@@ -1,6 +1,6 @@
 import { DI, IContainer, IRegistry, PLATFORM, Registration } from '@aurelia/kernel';
-import { Lifecycle, LifecycleFlags } from './lifecycle';
-import { BindingFlags, IChangeSet } from './observation';
+import { AttachLifecycleFlags } from './lifecycle';
+import { LifecycleFlags, IChangeSet } from './observation';
 import { ICustomElement } from './templating/custom-element';
 import { IRenderingEngine } from './templating/rendering-engine';
 
@@ -40,33 +40,16 @@ export class Aurelia {
         component.$hydrate(re, host);
       }
 
-      component.$bind(BindingFlags.fromStartTask | BindingFlags.fromBind);
+      component.$bind(LifecycleFlags.fromStartTask | LifecycleFlags.fromBind);
 
-      const cs = this.container.get(IChangeSet);
-      const lifecycle = Lifecycle.beginAttach(cs, config.host, LifecycleFlags.none);
-      lifecycle.attach(component);
-      lifecycle.end();
+      component.$attach(config.host, LifecycleFlags.fromStartTask);
     };
 
     this.startTasks.push(startTask);
 
     this.stopTasks.push(() => {
-      const cs = this.container.get(IChangeSet);
-      const lifecycle = Lifecycle.beginDetach(cs, LifecycleFlags.noTasks);
-      lifecycle.detach(component);
-      const task = lifecycle.end();
-
-      const flags = BindingFlags.fromStopTask | BindingFlags.fromUnbind;
-
-      if (task.done) {
-        component.$unbind(flags);
-        host.$au = null;
-      } else {
-        task.wait().then(() => {
-          component.$unbind(flags);
-          host.$au = null;
-        });
-      }
+      component.$detach(LifecycleFlags.fromStopTask);
+      component.$unbind(LifecycleFlags.fromStopTask);
     });
 
     if (this.isStarted) {

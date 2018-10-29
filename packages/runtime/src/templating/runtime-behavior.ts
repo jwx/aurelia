@@ -4,7 +4,7 @@ import { subscriberCollection } from '../binding/subscriber-collection';
 import { BindableDefinitions } from '../definitions';
 import { INode } from '../dom';
 import { LifecycleHooks } from '../lifecycle';
-import { BindingFlags, IAccessor, IChangeSet, IPropertySubscriber, ISubscribable, ISubscriberCollection, MutationKind } from '../observation';
+import { LifecycleFlags, IAccessor, IChangeSet, IPropertySubscriber, ISubscribable, ISubscriberCollection, MutationKind } from '../observation';
 import { ICustomAttribute, ICustomAttributeType } from './custom-attribute';
 import { CustomElementResource, ICustomElement, ICustomElementType } from './custom-element';
 
@@ -115,7 +115,7 @@ function createGetterSetter(instance: ICustomAttribute | ICustomElement, name: s
   Reflect.defineProperty(instance, name, {
     enumerable: true,
     get: function(): unknown { return this.$observers[name].getValue(); },
-    set: function(value: unknown): void { this.$observers[name].setValue(value, BindingFlags.updateTargetInstance); }
+    set: function(value: unknown): void { this.$observers[name].setValue(value, LifecycleFlags.updateTargetInstance); }
   });
 }
 
@@ -147,7 +147,7 @@ export class ChildrenObserver implements Partial<IChildrenObserver> {
   public setValue(newValue: unknown): void { /* do nothing */ }
 
   public flushChanges(this: ChildrenObserver & IChildrenObserver): void {
-    this.callSubscribers(this.children, undefined, BindingFlags.updateTargetInstance | BindingFlags.fromFlushChanges);
+    this.callSubscribers(this.children, undefined, LifecycleFlags.updateTargetInstance | LifecycleFlags.fromFlushChanges);
     this.hasChanges = false;
   }
 

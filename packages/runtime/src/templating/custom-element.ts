@@ -12,8 +12,8 @@ import {
 import { Scope } from '../binding/binding-context';
 import { IHydrateElementInstruction, ITemplateDefinition, TemplateDefinition } from '../definitions';
 import { DOM, INode, INodeSequence, IRenderLocation } from '../dom';
-import { BindLifecycle, IAttach, IAttachLifecycle, IBindSelf, IDetachLifecycle, ILifecycleHooks, ILifecycleState, IMountable, LifecycleHooks, LifecycleState } from '../lifecycle';
-import { BindingFlags } from '../observation';
+import { IAttach, IAttachLifecycle, IBindSelf, IDetachLifecycle, ILifecycleHooks, ILifecycleState, IMountable, LifecycleHooks, LifecycleState, Lifecycle } from '../lifecycle';
+import { LifecycleFlags } from '../observation';
 import { IResourceKind, IResourceType } from '../resource';
 import { buildTemplateDefinition } from './definition-builder';
 import { ILifecycleRender, IRenderable, IRenderingEngine } from './rendering-engine';
@@ -180,7 +180,7 @@ function hydrate(this: IInternalCustomElementImplementation, renderingEngine: IR
   }
 }
 
-function bind(this: IInternalCustomElementImplementation, flags: BindingFlags): void {
+function bind(this: IInternalCustomElementImplementation, flags: LifecycleFlags): void {
   if (this.$state & LifecycleState.isBound) {
     return;
   }
@@ -188,10 +188,10 @@ function bind(this: IInternalCustomElementImplementation, flags: BindingFlags): 
   this.$state |= LifecycleState.isBinding;
 
   const hooks = this.$behavior.hooks;
-  flags |= BindingFlags.fromBind;
+  flags |= LifecycleFlags.fromBind;
 
   if (hooks & LifecycleHooks.hasBound) {
-    BindLifecycle.queueBound(this, flags);
+    Lifecycle.queueBound(this, flags);
   }
 
   if (hooks & LifecycleHooks.hasBinding) {
@@ -210,20 +210,20 @@ function bind(this: IInternalCustomElementImplementation, flags: BindingFlags): 
   this.$state &= ~LifecycleState.isBinding;
 
   if (hooks & LifecycleHooks.hasBound) {
-    BindLifecycle.unqueueBound();
+    Lifecycle.unqueueBound();
   }
 }
 
-function unbind(this: IInternalCustomElementImplementation, flags: BindingFlags): void {
+function unbind(this: IInternalCustomElementImplementation, flags: LifecycleFlags): void {
   if (this.$state & LifecycleState.isBound) {
     // add isUnbinding flag
     this.$state |= LifecycleState.isUnbinding;
 
     const hooks = this.$behavior.hooks;
-    flags |= BindingFlags.fromUnbind;
+    flags |= LifecycleFlags.fromUnbind;
 
     if (hooks & LifecycleHooks.hasUnbound) {
-      BindLifecycle.queueUnbound(this, flags);
+      Lifecycle.queueUnbound(this, flags);
     }
 
     if (hooks & LifecycleHooks.hasUnbinding) {
@@ -240,12 +240,12 @@ function unbind(this: IInternalCustomElementImplementation, flags: BindingFlags)
     this.$state &= ~(LifecycleState.isBound | LifecycleState.isUnbinding);
 
     if (hooks & LifecycleHooks.hasUnbound) {
-      BindLifecycle.unqueueUnbound();
+      Lifecycle.unqueueUnbound();
     }
   }
 }
 
-function attach(this: IInternalCustomElementImplementation, encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
+function attach(this: IInternalCustomElementImplementation, encapsulationSource: INode, flags: LifecycleFlags): void {
   if (this.$state & LifecycleState.isAttached) {
     return;
   }
@@ -253,51 +253,64 @@ function attach(this: IInternalCustomElementImplementation, encapsulationSource:
   this.$state |= LifecycleState.isAttaching;
 
   const hooks = this.$behavior.hooks;
+  flags |= LifecycleFlags.fromAttach;
   encapsulationSource = this.$projector.provideEncapsulationSource(encapsulationSource);
 
+  Lifecycle.queueMount(this, flags);
+  if (hooks & LifecycleHooks.hasAttached) {
+    Lifecycle.queueAttached(this, flags);
+  }
+
   if (hooks & LifecycleHooks.hasAttaching) {
-    this.attaching(encapsulationSource, lifecycle);
+    this.attaching(encapsulationSource, flags);
   }
 
   let current = this.$attachableHead;
   while (current !== null) {
-    current.$attach(encapsulationSource, lifecycle);
+    current.$attach(encapsulationSource, flags);
     current = current.$nextAttach;
   }
 
-  lifecycle.queueMount(this);
+  Lifecycle.unqueueMount();
   // add isAttached flag, remove isAttaching flag
   this.$state |= LifecycleState.isAttached;
   this.$state &= ~LifecycleState.isAttaching;
 
   if (hooks & LifecycleHooks.hasAttached) {
-    lifecycle.queueAttachedCallback(<Required<typeof this>>this);
+    Lifecycle.unqueueAttached();
   }
 }
 
-function detach(this: IInternalCustomElementImplementation, lifecycle: IDetachLifecycle): void {
+function detach(this: IInternalCustomElementImplementation, flags: LifecycleFlags): void {
   if (this.$state & LifecycleState.isAttached) {
     // add isDetaching flag
     this.$state |= LifecycleState.isDetaching;
 
     const hooks = this.$behavior.hooks;
-    if (hooks & LifecycleHooks.hasDetaching) {
-      this.detaching(lifecycle);
+    flags |= LifecycleFlags.fromDetach;
+
+    Lifecycle.queueUnmount(this, flags);
+    if (hooks & LifecycleHooks.hasDetached) {
+      Lifecycle.queueDetached(this, flags);
     }
 
-    lifecycle.queueUnmount(this);
+    if (hooks & LifecycleHooks.hasDetaching) {
+      this.detaching(flags);
+    }
 
     let current = this.$attachableTail;
     while (current !== null) {
-      current.$detach(lifecycle);
+      current.$detach(flags);
       current = current.$prevAttach;
     }
+
+    Lifecycle.unqueueUnmount();
 
     // remove isAttached and isDetaching flags
     this.$state &= ~(LifecycleState.isAttached | LifecycleState.isDetaching);
 
     if (hooks & LifecycleHooks.hasDetached) {
-      lifecycle.queueDetachedCallback(<Required<typeof this>>this);
+      Lifecycle.unqueueDetached();
     }
   }
 }
@@ -314,11 +327,11 @@ function cache(this: IInternalCustomElementImplementation): void {
   }
 }
 
-function mount(this: IInternalCustomElementImplementation): void {
+function mount(this: IInternalCustomElementImplementation, flags: LifecycleFlags): void {
   this.$projector.project(this.$nodes);
 }
 
-function unmount(this: IInternalCustomElementImplementation): void {
+function unmount(this: IInternalCustomElementImplementation, flags: LifecycleFlags): void {
   this.$projector.take(this.$nodes);
 }
 

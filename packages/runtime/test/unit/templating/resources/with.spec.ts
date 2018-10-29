@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { With, BindingFlags } from '../../../../src/index';
+import { With, LifecycleFlags } from '../../../../src/index';
 import { hydrateCustomAttribute } from '../behavior-assistance';
 import { createScope } from '../scope-assistance';
 import { ensureSingleChildTemplateControllerBehaviors } from './template-controller-tests';
@@ -14,7 +14,7 @@ describe('The "with" template controller', () => {
     const { attribute } = hydrateCustomAttribute(With);
     const child = attribute['currentView'];
 
-    attribute.$bind(BindingFlags.fromBind, createScope());
+    attribute.$bind(LifecycleFlags.fromBind, createScope());
 
     let withValue = {};
     attribute.value = withValue;

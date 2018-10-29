@@ -2,7 +2,7 @@ import {
   ValueAttributeObserver,
   IObserverLocator,
   IChangeSet,
-  BindingFlags,
+  LifecycleFlags,
   Binding,
   IBindingTargetObserver,
   IPropertySubscriber,
@@ -70,24 +70,24 @@ describe('ValueAttributeObserver', () => {
               const changeCountAfter = expectedValueBefore !== expectedValueAfter ? 1 : 0;
               let callCount = 0;
 
-              sut.setValue(valueBefore, BindingFlags.none);
+              sut.setValue(valueBefore, LifecycleFlags.none);
               expect(changeSet.size).to.equal(changeCountBefore, 'changeSet.size 1');
               changeSet.flushChanges();
               expect(el.value).to.equal(expectedValueBefore, 'el.value 1');
               expect(sut.getValue()).to.equal(expectedValueBefore, 'sut.getValue() 1');
               if (hasSubscriber && changeCountBefore) {
                 callCount++;
-                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueBefore, sut.defaultValue, BindingFlags.fromFlushChanges | BindingFlags.updateTargetInstance);
+                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueBefore, sut.defaultValue, LifecycleFlags.fromFlushChanges | LifecycleFlags.updateTargetInstance);
               }
 
-              sut.setValue(valueAfter, BindingFlags.none);
+              sut.setValue(valueAfter, LifecycleFlags.none);
               expect(changeSet.size).to.equal(changeCountAfter, 'changeSet.size 2');
               changeSet.flushChanges();
               expect(el.value).to.equal(expectedValueAfter, 'el.value 2');
               expect(sut.getValue()).to.equal(expectedValueAfter, 'sut.getValue() 2');
               if (hasSubscriber && changeCountAfter) {
                 callCount++;
-                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueAfter, expectedValueBefore, BindingFlags.fromFlushChanges | BindingFlags.updateTargetInstance);
+                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueAfter, expectedValueBefore, LifecycleFlags.fromFlushChanges | LifecycleFlags.updateTargetInstance);
               }
               if (hasSubscriber) {
                 expect((<SinonSpy>subscriber.handleChange).getCalls().length).to.equal(callCount);
@@ -140,7 +140,7 @@ describe('ValueAttributeObserver', () => {
               expect(sut.getValue()).to.equal(expectedValueBefore, 'sut.getValue() 1');
               if (expectedValueBefore !== '') {
                 callCount++;
-                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueBefore, sut.defaultValue, BindingFlags.updateSourceExpression | BindingFlags.fromDOMEvent);
+                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueBefore, sut.defaultValue, LifecycleFlags.updateSourceExpression | LifecycleFlags.fromDOMEvent);
               }
 
               el.value = valueAfter;
@@ -149,7 +149,7 @@ describe('ValueAttributeObserver', () => {
               expect(sut.getValue()).to.equal(expectedValueAfter, 'sut.getValue() 2');
               if (expectedValueBefore !== expectedValueAfter) {
                 callCount++;
-                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueAfter, expectedValueBefore, BindingFlags.updateSourceExpression | BindingFlags.fromDOMEvent);
+                expect(subscriber.handleChange).to.have.been.calledWith(expectedValueAfter, expectedValueBefore, LifecycleFlags.updateSourceExpression | LifecycleFlags.fromDOMEvent);
               }
               expect((<SinonSpy>subscriber.handleChange).getCalls().length).to.equal(callCount);
 

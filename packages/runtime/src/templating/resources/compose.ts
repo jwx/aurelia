@@ -8,7 +8,7 @@ import {
 } from '../../definitions';
 import { INode } from '../../dom';
 import { IAttachLifecycle, IDetachLifecycle } from '../../lifecycle';
-import { BindingFlags, IChangeSet } from '../../observation';
+import { LifecycleFlags, IChangeSet } from '../../observation';
 import { bindable } from '../bindable';
 import { createElement, RenderPlan } from '../create-element';
 import { customElement, ICustomElement } from '../custom-element';
@@ -58,20 +58,20 @@ export class Compose {
       }, {});
   }
 
-  public binding(flags: BindingFlags): void {
+  public binding(flags: LifecycleFlags): void {
     this.startComposition(this.subject);
     this.coordinator.binding(flags, this.$scope);
   }
 
-  public attaching(encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
-    this.coordinator.attaching(encapsulationSource, lifecycle);
+  public attaching(encapsulationSource: INode, flags: LifecycleFlags): void {
+    this.coordinator.attaching(encapsulationSource, flags);
   }
 
-  public detaching(lifecycle: IDetachLifecycle): void {
-    this.coordinator.detaching(lifecycle);
+  public detaching(flags: LifecycleFlags): void {
+    this.coordinator.detaching(flags);
   }
 
-  public unbinding(flags: BindingFlags): void {
+  public unbinding(flags: LifecycleFlags): void {
     this.lastSubject = null;
     this.coordinator.unbinding(flags);
   }

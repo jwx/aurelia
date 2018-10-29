@@ -1,27 +1,30 @@
 import { DI, IDisposable, IIndexable, PLATFORM } from '@aurelia/kernel';
+import { Lifecycle } from './lifecycle';
 
-export enum BindingFlags {
-  none                   = 0b000_00000000_000_00,
-  mustEvaluate           = 0b100_00000000_000_00,
-
-  mutation               = 0b0000_00000000_000_11,
-  isCollectionMutation   = 0b0000_00000000_000_01,
-  isInstanceMutation     = 0b0000_00000000_000_10,
-
-  update                 = 0b0000_00000000_111_00,
-  updateTargetObserver   = 0b0000_00000000_001_00,
-  updateTargetInstance   = 0b0000_00000000_010_00,
-  updateSourceExpression = 0b0000_00000000_100_00,
-
-  from                   = 0b0000_11111111_000_00,
-  fromFlushChanges       = 0b0000_00000001_000_00,
-  fromStartTask          = 0b0000_00000010_000_00,
-  fromStopTask           = 0b0000_00000100_000_00,
-  fromBind               = 0b0000_00001000_000_00,
-  fromUnbind             = 0b0000_00010000_000_00,
-  fromDOMEvent           = 0b0000_00100000_000_00,
-  fromObserverSetter     = 0b0000_01000000_000_00,
-  fromBindableHandler    = 0b0000_10000000_000_00,
+export enum LifecycleFlags {
+  none                   = 0b0000_0000000000000_000_00,
+  mustEvaluate           = 0b1000_0000000000000_000_00,
+  mutation               = 0b0000_0000000000000_000_11,
+  isCollectionMutation   = 0b0000_0000000000000_000_01,
+  isInstanceMutation     = 0b0000_0000000000000_000_10,
+  update                 = 0b0000_0000000000000_111_00,
+  updateTargetObserver   = 0b0000_0000000000000_001_00,
+  updateTargetInstance   = 0b0000_0000000000000_010_00,
+  updateSourceExpression = 0b0000_0000000000000_100_00,
+  from                   = 0b0000_1111111111111_000_00,
+  fromFlushChanges       = 0b0000_0000000000001_000_00,
+  fromStartTask          = 0b0000_0000000000010_000_00,
+  fromStopTask           = 0b0000_0000000000100_000_00,
+  fromBind               = 0b0000_0000000001000_000_00,
+  fromUnbind             = 0b0000_0000000010000_000_00,
+  fromDOMEvent           = 0b0000_0000000100000_000_00,
+  fromObserverSetter     = 0b0000_0000001000000_000_00,
+  fromBindableHandler    = 0b0000_0000010000000_000_00,
+  fromAttach             = 0b0000_0000100000000_000_00,
+  fromDetach             = 0b0000_0001000000000_000_00,
+  fromMount              = 0b0000_0010000000000_000_00,
+  fromUnmount            = 0b0000_0100000000000_000_00,
+  fromRelease            = 0b0000_1000000000000_000_00,
 }
 
 /*@internal*/
@@ -184,18 +187,21 @@ export class LinkedChangeList implements IChangeSet {
    */
   public flushChanges = (): void => {
     this.flushing = true;
-    while (this.size > 0) {
-      let current = this.head;
-      this.head = this.tail = null;
-      this.size = 0;
-      let next;
-      while (current && current !== marker) {
-        next = current.$next;
-        current.$next = null;
-        current.flushChanges();
-        current = next;
-      }
+    if (Lifecycle.flushChangesDepth > 0) {
+      Lifecycle.unqueueFlushChangesCallbacks();
     }
+    // while (this.size > 0) {
+    //   let current = this.head;
+    //   this.head = this.tail = null;
+    //   this.size = 0;
+    //   let next;
+    //   while (current && current !== marker) {
+    //     next = current.$next;
+    //     current.$next = null;
+    //     current.flushChanges();
+    //     current = next;
+    //   }
+    // }
     this.flushing = false;
   }
 
@@ -204,19 +210,23 @@ export class LinkedChangeList implements IChangeSet {
     if (this.size === 0) {
       this.flushed = this.promise.then(this.flushChanges);
     }
-    if (item.$next) {
-      return this.flushed;
+    Lifecycle.queueFlushChanges(item, LifecycleFlags.fromFlushChanges);
+    if (Lifecycle.flushChangesDepth === 2) {
+      Lifecycle.flushChangesDepth = 1;
     }
-    // this is just to give the tail node a non-null value as a cheap way to check whether
-    // something is queued already
-    item.$next = marker;
-    if (this.tail !== null) {
-      this.tail.$next = item;
-    } else {
-      this.head = item;
-    }
-    this.tail = item;
-    this.size++;
+    // if (item.$next) {
+    //   return this.flushed;
+    // }
+    // // this is just to give the tail node a non-null value as a cheap way to check whether
+    // // something is queued already
+    // item.$next = marker;
+    // if (this.tail !== null) {
+    //   this.tail.$next = item;
+    // } else {
+    //   this.head = item;
+    // }
+    // this.tail = item;
+    // this.size++;
     return this.flushed;
   }
 
@@ -227,7 +237,7 @@ export class LinkedChangeList implements IChangeSet {
  */
 export interface IAccessor<TValue = any> {
   getValue(): TValue;
-  setValue(newValue: TValue, flags: BindingFlags): void;
+  setValue(newValue: TValue, flags: LifecycleFlags): void;
 }
 
 /**
@@ -252,8 +262,8 @@ export interface IBindingTargetObserver<
           ISubscribable<MutationKind.instance>,
           ISubscriberCollection<MutationKind.instance> {
 
-  bind?(flags: BindingFlags): void;
-  unbind?(flags: BindingFlags): void;
+  bind?(flags: LifecycleFlags): void;
+  unbind?(flags: LifecycleFlags): void;
 }
 
 export type AccessorOrObserver = IBindingTargetAccessor | IBindingTargetObserver;
@@ -297,7 +307,7 @@ export interface ICollectionChangeTracker<T extends Collection> extends IChangeT
 /**
  * Represents a (subscriber) function that can be called by a PropertyChangeNotifier
  */
-export type IPropertyChangeHandler<TValue = any> = (newValue: TValue, previousValue: TValue, flags: BindingFlags) => void;
+export type IPropertyChangeHandler<TValue = any> = (newValue: TValue, previousValue: TValue, flags: LifecycleFlags) => void;
 /**
  * Represents a (observer) function that can notify subscribers of mutations on a property
  */
@@ -306,12 +316,12 @@ export interface IPropertyChangeNotifier extends IPropertyChangeHandler {}
 /**
  * Describes a (subscriber) type that has a function conforming to the IPropertyChangeHandler interface
  */
-export interface IPropertySubscriber<TValue = any> { handleChange(newValue: TValue, previousValue: TValue, flags: BindingFlags): void; }
+export interface IPropertySubscriber<TValue = any> { handleChange(newValue: TValue, previousValue: TValue, flags: LifecycleFlags): void; }
 
 /**
  * Represents a (subscriber) function that can be called by a CollectionChangeNotifier
  */
-export type ICollectionChangeHandler = (origin: string, args: IArguments | null, flags?: BindingFlags) => void;
+export type ICollectionChangeHandler = (origin: string, args: IArguments | null, flags?: LifecycleFlags) => void;
 /**
  * Represents a (observer) function that can notify subscribers of mutations in a collection
  */
@@ -329,7 +339,7 @@ export interface IBatchedCollectionChangeNotifier extends IBatchedCollectionChan
 /**
  * Describes a (subscriber) type that has a function conforming to the ICollectionChangeHandler interface
  */
-export interface ICollectionSubscriber { handleChange(origin: string, args: IArguments | null, flags: BindingFlags): void; }
+export interface ICollectionSubscriber { handleChange(origin: string, args: IArguments | null, flags: LifecycleFlags): void; }
 /**
  * Describes a (subscriber) type that has a function conforming to the IBatchedCollectionChangeNotifier interface
  */

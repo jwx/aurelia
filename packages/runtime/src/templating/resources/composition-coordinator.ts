@@ -1,7 +1,7 @@
 import { PLATFORM } from '@aurelia/kernel';
 import { INode } from '../../dom';
-import { AggregateLifecycleTask, IAttachLifecycle, IDetachLifecycle, ILifecycleTask, Lifecycle, LifecycleFlags } from '../../lifecycle';
-import { BindingFlags, IChangeSet, IScope } from '../../observation';
+import { IAttachLifecycle, IDetachLifecycle, ILifecycleTask, AttachLifecycleFlags } from '../../lifecycle';
+import { LifecycleFlags, IChangeSet, IScope } from '../../observation';
 import { IView } from '../view';
 
 export class CompositionCoordinator {
@@ -9,7 +9,7 @@ export class CompositionCoordinator {
 
   private queue: (IView | PromiseSwap)[] = null;
   private currentView: IView = null;
-  private swapTask: ILifecycleTask = Lifecycle.done;
+  //private swapTask: ILifecycleTask = AttachLifecycle.done;
   private encapsulationSource: INode;
   private scope: IScope;
   private isBound: boolean = false;
@@ -18,27 +18,27 @@ export class CompositionCoordinator {
   constructor(public readonly changeSet: IChangeSet) {}
 
   public compose(value: IView | Promise<IView>): void {
-    if (this.swapTask.done) {
-      if (value instanceof Promise) {
-        this.enqueue(new PromiseSwap(this, value));
-        this.processNext();
-      } else {
-        this.swap(value);
-      }
-    } else {
-      if (value instanceof Promise) {
-        this.enqueue(new PromiseSwap(this, value));
-      } else {
-        this.enqueue(value);
-      }
+    // if (this.swapTask.done) {
+    //   if (value instanceof Promise) {
+    //     this.enqueue(new PromiseSwap(this, value));
+    //     this.processNext();
+    //   } else {
+    //     this.swap(value);
+    //   }
+    // } else {
+    //   if (value instanceof Promise) {
+    //     this.enqueue(new PromiseSwap(this, value));
+    //   } else {
+    //     this.enqueue(value);
+    //   }
 
-      if (this.swapTask.canCancel()) {
-        this.swapTask.cancel();
-      }
-    }
+    //   if (this.swapTask.canCancel()) {
+    //     this.swapTask.cancel();
+    //   }
+    // }
   }
 
-  public binding(flags: BindingFlags, scope: IScope): void {
+  public binding(flags: LifecycleFlags, scope: IScope): void {
     this.scope = scope;
     this.isBound = true;
 
@@ -47,24 +47,24 @@ export class CompositionCoordinator {
     }
   }
 
-  public attaching(encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
+  public attaching(encapsulationSource: INode, flags: LifecycleFlags): void {
     this.encapsulationSource = encapsulationSource;
     this.isAttached = true;
 
     if (this.currentView !== null) {
-      this.currentView.$attach(encapsulationSource, lifecycle);
+      this.currentView.$attach(encapsulationSource, flags);
     }
   }
 
-  public detaching(lifecycle: IDetachLifecycle): void {
+  public detaching(flags: LifecycleFlags): void {
     this.isAttached = false;
 
     if (this.currentView !== null) {
-      this.currentView.$detach(lifecycle);
+      this.currentView.$detach(flags);
     }
   }
 
-  public unbinding(flags: BindingFlags): void {
+  public unbinding(flags: LifecycleFlags): void {
     this.isBound = false;
 
     if (this.currentView !== null) {
@@ -76,89 +76,89 @@ export class CompositionCoordinator {
     this.currentView = null;
   }
 
-  private enqueue(view: IView | PromiseSwap): void {
-    if (this.queue === null) {
-      this.queue = [];
-    }
+  // private enqueue(view: IView | PromiseSwap): void {
+  //   if (this.queue === null) {
+  //     this.queue = [];
+  //   }
 
-    this.queue.push(view);
-  }
+  //   this.queue.push(view);
+  // }
 
-  private swap(view: IView): void {
-    if (this.currentView === view) {
-      return;
-    }
+  // private swap(view: IView): void {
+  //   if (this.currentView === view) {
+  //     return;
+  //   }
 
-    const swapTask = new AggregateLifecycleTask();
+  //   const swapTask = new AggregateLifecycleTask();
 
-    swapTask.addTask(
-      this.detachAndUnbindCurrentView(
-        this.isAttached
-          ? LifecycleFlags.none
-          : LifecycleFlags.noTasks
-      )
-    );
+  //   swapTask.addTask(
+  //     this.detachAndUnbindCurrentView(
+  //       this.isAttached
+  //         ? AttachLifecycleFlags.none
+  //         : AttachLifecycleFlags.noTasks
+  //     )
+  //   );
 
-    this.currentView = view;
+  //   this.currentView = view;
 
-    swapTask.addTask(
-      this.bindAndAttachCurrentView()
-    );
+  //   swapTask.addTask(
+  //     this.bindAndAttachCurrentView()
+  //   );
 
-    if (swapTask.done) {
-      this.swapTask = Lifecycle.done;
-      this.onSwapComplete();
-    } else {
-      this.swapTask = swapTask;
-      this.swapTask.wait().then(() => {
-        this.onSwapComplete();
-        this.processNext();
-      });
-    }
-  }
+  //   if (swapTask.done) {
+  //     this.swapTask = AttachLifecycle.done;
+  //     this.onSwapComplete();
+  //   } else {
+  //     this.swapTask = swapTask;
+  //     this.swapTask.wait().then(() => {
+  //       this.onSwapComplete();
+  //       this.processNext();
+  //     });
+  //   }
+  // }
 
-  private processNext(): void {
-    if (this.queue !== null && this.queue.length > 0) {
-      const next = this.queue.pop();
-      this.queue.length = 0;
+  // private processNext(): void {
+  //   if (this.queue !== null && this.queue.length > 0) {
+  //     const next = this.queue.pop();
+  //     this.queue.length = 0;
 
-      if (PromiseSwap.is(next)) {
-        this.swapTask = next.start();
-      } else {
-        this.swap(next);
-      }
-    } else {
-      this.swapTask = Lifecycle.done;
-    }
-  }
+  //     if (PromiseSwap.is(next)) {
+  //       this.swapTask = next.start();
+  //     } else {
+  //       this.swap(next);
+  //     }
+  //   } else {
+  //     this.swapTask = AttachLifecycle.done;
+  //   }
+  // }
 
-  private detachAndUnbindCurrentView(detachFlags: LifecycleFlags): ILifecycleTask {
-    if (this.currentView === null) {
-      return Lifecycle.done;
-    }
+  // private detachAndUnbindCurrentView(detachFlags: AttachLifecycleFlags): ILifecycleTask {
+  //   if (this.currentView === null) {
+  //     return AttachLifecycle.done;
+  //   }
 
-    return Lifecycle.beginDetach(this.changeSet, detachFlags | LifecycleFlags.unbindAfterDetached)
-      .detach(this.currentView)
-      .end();
-  }
+  //   return AttachLifecycle.beginDetach(this.changeSet, detachFlags | AttachLifecycleFlags.unbindAfterDetached)
+  //     .detach(this.currentView)
+  //     .end();
+  // }
 
-  private bindAndAttachCurrentView(): ILifecycleTask {
-    if (this.currentView === null) {
-      return Lifecycle.done;
-    }
+  // private bindAndAttachCurrentView(): ILifecycleTask {
+  //   if (this.currentView === null) {
+  //     return AttachLifecycle.done;
+  //   }
 
-    if (this.isBound) {
-      this.currentView.$bind(BindingFlags.fromBindableHandler, this.scope);
-    }
+  //   if (this.isBound) {
+  //     this.currentView.$bind(LifecycleFlags.fromBindableHandler, this.scope);
+  //   }
 
-    if (this.isAttached) {
-      return Lifecycle.beginAttach(this.changeSet, this.encapsulationSource, LifecycleFlags.none)
-        .attach(this.currentView)
-        .end();
-    }
+  //   if (this.isAttached) {
+  //     return AttachLifecycle.beginAttach(this.changeSet, this.encapsulationSource, AttachLifecycleFlags.none)
+  //       .attach(this.currentView)
+  //       .end();
+  //   }
 
-    return Lifecycle.done;
-  }
+  //   return AttachLifecycle.done;
+  // }
 }
 
 class PromiseSwap implements ILifecycleTask {
@@ -176,7 +176,7 @@ class PromiseSwap implements ILifecycleTask {
 
   public start(): ILifecycleTask {
     if (this.isCancelled) {
-      return Lifecycle.done;
+      //return AttachLifecycle.done;
     }
 
     this.promise = this.promise.then(x => {

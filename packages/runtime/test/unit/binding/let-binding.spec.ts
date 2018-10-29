@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { spy } from 'sinon';
 import { DI, IContainer } from '../../../../kernel/src/index';
-import { LetBinding, BindingFlags, BindingMode, ExpressionKind, IBindingTarget, IExpression, IObserverLocator, IScope, Scope, LifecycleState } from '../../../src/index';
+import { LetBinding, LifecycleFlags, BindingMode, ExpressionKind, IBindingTarget, IExpression, IObserverLocator, IScope, Scope, LifecycleState } from '../../../src/index';
 import { MockExpression } from '../mock';
 
 const getName = (o: any) => Object.prototype.toString.call(o).slice(8, -1);
@@ -41,9 +41,9 @@ describe('LetBinding', () => {
       const sourceExpression = new MockExpression();
       const scope = Scope.create(vm, null);
       sut = new LetBinding(<any>sourceExpression, 'foo', observerLocator, container);
-      sut.$bind(BindingFlags.none, scope);
+      sut.$bind(LifecycleFlags.none, scope);
       const target = sut.target;
-      sut.$bind(BindingFlags.none, scope);
+      sut.$bind(LifecycleFlags.none, scope);
       expect(sut.target).to.equal(target, 'It should have not recreated target');
     });
 
@@ -51,7 +51,7 @@ describe('LetBinding', () => {
       const vm = { vm: 5 };
       const sourceExpression = new MockExpression();
       sut = new LetBinding(<any>sourceExpression, 'foo', observerLocator, container, true);
-      sut.$bind(BindingFlags.none, Scope.create(vm, null));
+      sut.$bind(LifecycleFlags.none, Scope.create(vm, null));
       expect(sut.target).to.equal(vm, 'It should have used bindingContext to create target.');
     });
 
@@ -60,7 +60,7 @@ describe('LetBinding', () => {
       const view = { view: 6 };
       const sourceExpression = new MockExpression();
       sut = new LetBinding(<any>sourceExpression, 'foo', observerLocator, container);
-      sut.$bind(BindingFlags.none, Scope.create(vm, <any>view));
+      sut.$bind(LifecycleFlags.none, Scope.create(vm, <any>view));
       expect(sut.target).to.equal(view, 'It should have used overrideContext to create target.');
     });
   });
@@ -70,7 +70,7 @@ describe('LetBinding', () => {
       const vm = { vm: 5, foo: false };
       const sourceExpression = new MockExpression();
       sut = new LetBinding(<any>sourceExpression, 'foo', observerLocator, container, true);
-      sut.$bind(BindingFlags.none, Scope.create(vm, null));
+      sut.$bind(LifecycleFlags.none, Scope.create(vm, null));
       vm.foo = true;
       expect(sourceExpression.connect).to.have.been.callCount(1);
     });
@@ -82,7 +82,7 @@ describe('LetBinding', () => {
       const scope: any = {};
       sut = new LetBinding(<any>sourceExpression, 'foo', observerLocator, container, true);
       sut['$scope'] = scope;
-      sut.$unbind(BindingFlags.fromUnbind);
+      sut.$unbind(LifecycleFlags.fromUnbind);
       expect(sut['$scope'] === scope).to.be.true;
     });
 
@@ -94,11 +94,11 @@ describe('LetBinding', () => {
       sut.$state |= LifecycleState.isBound;
       const unobserveSpy = spy(sut, 'unobserve');
       const unbindSpy = sourceExpression.unbind = spy();
-      sut.$unbind(BindingFlags.fromUnbind);
+      sut.$unbind(LifecycleFlags.fromUnbind);
       expect(sut['$scope']).to.be.null;
       expect(sut['$state'] & LifecycleState.isBound).to.equal(0);
       expect(unobserveSpy).to.have.been.calledWith(true);
-      expect(unbindSpy).to.have.been.calledWith(BindingFlags.fromUnbind, scope, sut);
+      expect(unbindSpy).to.have.been.calledWith(LifecycleFlags.fromUnbind, scope, sut);
     });
   });
 });

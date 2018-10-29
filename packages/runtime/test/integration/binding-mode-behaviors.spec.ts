@@ -1,4 +1,4 @@
-import { ToViewBindingBehavior, FromViewBindingBehavior, TwoWayBindingBehavior, IObserverLocator, OneTimeBindingBehavior, Binding, BindingFlags, IExpression, BindingMode, IScope, IsBindingBehavior } from '../../src/index';
+import { ToViewBindingBehavior, FromViewBindingBehavior, TwoWayBindingBehavior, IObserverLocator, OneTimeBindingBehavior, Binding, LifecycleFlags, IExpression, BindingMode, IScope, IsBindingBehavior } from '../../src/index';
 import { expect } from 'chai';
 import { IContainer } from '../../../kernel/src/index';
 
@@ -17,7 +17,7 @@ describe('BindingModeBehavior', () => {
   let container: IContainer;
   let sut: OneTimeBindingBehavior;
   let binding: Binding;
-  let flags: BindingFlags;
+  let flags: LifecycleFlags;
   let scope: IScope;
 
   for (const { Behavior, mode } of tests) {

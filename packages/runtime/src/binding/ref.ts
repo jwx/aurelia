@@ -1,6 +1,6 @@
 import { IServiceLocator } from '@aurelia/kernel';
 import { IBindScope, LifecycleState } from '../lifecycle';
-import { BindingFlags, IScope } from '../observation';
+import { LifecycleFlags, IScope } from '../observation';
 import { hasBind, hasUnbind, IsBindingBehavior, StrictAny } from './ast';
 import { IBinding, IBindingTarget } from './binding';
 import { IConnectableBinding } from './connectable';
@@ -20,13 +20,13 @@ export class Ref implements IBinding {
     public locator: IServiceLocator) {
   }
 
-  public $bind(flags: BindingFlags, scope: IScope): void {
+  public $bind(flags: LifecycleFlags, scope: IScope): void {
     if (this.$state & LifecycleState.isBound) {
       if (this.$scope === scope) {
         return;
       }
 
-      this.$unbind(flags | BindingFlags.fromBind);
+      this.$unbind(flags | LifecycleFlags.fromBind);
     }
     // add isBinding flag
     this.$state |= LifecycleState.isBinding;
@@ -45,7 +45,7 @@ export class Ref implements IBinding {
     this.$state &= ~LifecycleState.isBinding;
   }
 
-  public $unbind(flags: BindingFlags): void {
+  public $unbind(flags: LifecycleFlags): void {
     if (!(this.$state & LifecycleState.isBound)) {
       return;
     }
@@ -68,6 +68,6 @@ export class Ref implements IBinding {
   }
   // tslint:disable:no-empty no-any
   public observeProperty(obj: StrictAny, propertyName: StrictAny): void { }
-  public handleChange(newValue: any, previousValue: any, flags: BindingFlags): void { }
+  public handleChange(newValue: any, previousValue: any, flags: LifecycleFlags): void { }
   // tslint:enable:no-empty no-any
 }

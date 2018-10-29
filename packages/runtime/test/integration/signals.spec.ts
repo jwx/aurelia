@@ -1,4 +1,4 @@
-import { IExpression, IObserverLocator, Binding, BindingFlags, IScope, BindingMode, SignalBindingBehavior, ISignaler, IsBindingBehavior } from '../../src/index';
+import { IExpression, IObserverLocator, Binding, LifecycleFlags, IScope, BindingMode, SignalBindingBehavior, ISignaler, IsBindingBehavior } from '../../src/index';
 import { spy } from 'sinon';
 import { expect } from 'chai';
 import { IContainer } from '../../../kernel/src/index';
@@ -12,7 +12,7 @@ describe('SignalBindingBehavior', () => {
   let container: IContainer;
   let sut: SignalBindingBehavior;
   let binding: Binding;
-  let flags: BindingFlags;
+  let flags: LifecycleFlags;
   let scope: IScope;
   let signaler: ISignaler;
   let name: string;

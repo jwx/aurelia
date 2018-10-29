@@ -5,14 +5,14 @@ import {
   AccessScope,
   Binding,
   IObservedArray,
-  BindingFlags,
+  LifecycleFlags,
   BindingMode,
   ViewFactory,
   ObservedCollection,
   RuntimeBehavior,
   ObserverLocator,
-  Lifecycle,
-  LifecycleFlags,
+  AttachLifecycle,
+  AttachLifecycleFlags,
   LinkedChangeList,
   IView,
   LifecycleState
@@ -84,26 +84,26 @@ describe(`Repeat`, () => {
     <(($1: [any, number, string, string]) => [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([items, count, expected]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromBind, createScopeForTest({ }));
+        sut.$bind(LifecycleFlags.fromBind, createScopeForTest({ }));
 
         expect(sut.views.length).to.equal(count, `execute1, sut.views.length`);
         expect(host.textContent).to.equal('', `execute1, host.textContent`);
         verifyViewBindingContexts(sut.views, items);
 
-        Lifecycle.beginAttach(cs, host, LifecycleFlags.none).attach(sut).end();
+        AttachLifecycle.beginAttach(cs, host, AttachLifecycleFlags.none).attach(sut).end();
 
         expect(host.textContent).to.equal(expected, `execute1, host.textContent`);
 
       }, `$bind(fromBind)  -> $attach(none)`],
 
       ([items, count, expected]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromBind | BindingFlags.fromFlushChanges, createScopeForTest({ }));
+        sut.$bind(LifecycleFlags.fromBind | LifecycleFlags.fromFlushChanges, createScopeForTest({ }));
         verifyViewBindingContexts(sut.views, items);
 
         expect(sut.views.length).to.equal(count), `execute1, sut.views.length`;
         expect(host.textContent).to.equal('', `execute1, host.textContent`);
 
-        Lifecycle.beginAttach(cs, host, LifecycleFlags.none).attach(sut).end();
+        AttachLifecycle.beginAttach(cs, host, AttachLifecycleFlags.none).attach(sut).end();
 
         expect(host.textContent).to.equal(expected, `execute1, host.textContent`);
 
@@ -113,7 +113,7 @@ describe(`Repeat`, () => {
     <(($1: [any, number, string, string]) => [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([items, count, expected]) => [(sut, host) => {
-        sut.$bind(BindingFlags.fromBind, sut.$scope);
+        sut.$bind(LifecycleFlags.fromBind, sut.$scope);
         verifyViewBindingContexts(sut.views, items);
 
         expect(sut.views.length).to.equal(count, `execute2, sut.views.length`);
@@ -122,7 +122,7 @@ describe(`Repeat`, () => {
       }, `$bind(fromBind), same scope`],
 
       ([items, count, expected]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromBind, createScopeForTest({ }));
+        sut.$bind(LifecycleFlags.fromBind, createScopeForTest({ }));
         verifyViewBindingContexts(sut.views, items);
 
         expect(sut.views.length).to.equal(count, `execute2, sut.views.length`);
@@ -136,7 +136,7 @@ describe(`Repeat`, () => {
       }, `$bind(fromBind), new scope `],
 
       ([items, count, expected]) => [(sut, host) => {
-        sut.$bind(BindingFlags.fromBind | BindingFlags.fromFlushChanges, createScopeForTest({ }));
+        sut.$bind(LifecycleFlags.fromBind | LifecycleFlags.fromFlushChanges, createScopeForTest({ }));
         verifyViewBindingContexts(sut.views, items);
 
         expect(sut.views.length).to.equal(count, `execute2, sut.views.length`);
@@ -160,7 +160,7 @@ describe(`Repeat`, () => {
 
       ([items,], $2, $3, [newItems, newCount, newExpected]) => [(sut, host, cs) => {
         sut.items = newItems;
-        sut.itemsChanged(newItems, items, BindingFlags.updateTargetInstance);
+        sut.itemsChanged(newItems, items, LifecycleFlags.updateTargetInstance);
         verifyViewBindingContexts(sut.views, newItems);
 
         cs.flushChanges();
@@ -172,7 +172,7 @@ describe(`Repeat`, () => {
 
       ([items,], $2, $3, [newItems, newCount, newExpected]) => [(sut, host, cs) => {
         sut.items = newItems;
-        sut.itemsChanged(newItems, items, BindingFlags.updateTargetInstance);
+        sut.itemsChanged(newItems, items, LifecycleFlags.updateTargetInstance);
         verifyViewBindingContexts(sut.views, newItems);
 
         cs.flushChanges();
@@ -182,7 +182,7 @@ describe(`Repeat`, () => {
 
         if (!(Array.isArray(newItems)) || items === newItems) {
           const arr = sut.items = [];
-          sut.itemsChanged(arr, items, BindingFlags.updateTargetInstance);
+          sut.itemsChanged(arr, items, LifecycleFlags.updateTargetInstance);
 
           cs.flushChanges();
 
@@ -252,7 +252,7 @@ describe(`Repeat`, () => {
 
       ([items,], $2, $3, [newItems, newCount, newExpected]) => [(sut, host, cs) => {
         sut.items = newItems;
-        sut.itemsChanged(newItems, items, BindingFlags.updateTargetInstance);
+        sut.itemsChanged(newItems, items, LifecycleFlags.updateTargetInstance);
         verifyViewBindingContexts(sut.views, newItems);
 
         cs.flushChanges();
@@ -262,7 +262,7 @@ describe(`Repeat`, () => {
 
         if (!(Array.isArray(newItems)) || items === newItems) {
           const arr = sut.items = [];
-          sut.itemsChanged(arr, items, BindingFlags.updateTargetInstance);
+          sut.itemsChanged(arr, items, LifecycleFlags.updateTargetInstance);
 
           cs.flushChanges();
 
@@ -339,7 +339,7 @@ describe(`Repeat`, () => {
 
       ([items,], $2, $3, [newItems, newCount, newExpected]) => [(sut, host, cs) => {
         sut.items = newItems;
-        sut.itemsChanged(newItems, items, BindingFlags.updateTargetInstance);
+        sut.itemsChanged(newItems, items, LifecycleFlags.updateTargetInstance);
         verifyViewBindingContexts(sut.views, newItems);
 
         cs.flushChanges();
@@ -349,7 +349,7 @@ describe(`Repeat`, () => {
 
         if (!(Array.isArray(newItems)) || items === newItems) {
           const arr = sut.items = [];
-          sut.itemsChanged(arr, items, BindingFlags.updateTargetInstance);
+          sut.itemsChanged(arr, items, LifecycleFlags.updateTargetInstance);
 
           cs.flushChanges();
 
@@ -437,14 +437,14 @@ describe(`Repeat`, () => {
     <(($1: [any, number, string, string], $2, $3, $4: [any, number, string, string], $5: [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string]) => [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([items, count], $2, $3, [newItems, newCount]) => [(sut, host, cs) => {
-        Lifecycle.beginDetach(cs, LifecycleFlags.none).detach(sut).end();
+        AttachLifecycle.beginDetach(cs, AttachLifecycleFlags.none).detach(sut).end();
 
         const currentCount = sut.items && sut.items.length ? sut.items.length : sut.items === items ? count : sut.items === newItems ? newCount : 0;
 
         expect(sut.views.length).to.equal(currentCount, `execute4, sut.views.length 1`);
         expect(host.textContent).to.equal('', `execute4, host.textContent 1`);
 
-        sut.$unbind(BindingFlags.fromUnbind);
+        sut.$unbind(LifecycleFlags.fromUnbind);
 
         expect(sut.views.length).to.equal(currentCount, `execute4, sut.views.length 2`);
         expect(host.textContent).to.equal('', `execute4, host.textContent 2`);
@@ -452,14 +452,14 @@ describe(`Repeat`, () => {
       }, `$detach(none)   -> $unbind(fromUnbind)`],
 
       ([items, count], $2, $3, [newItems, newCount]) => [(sut, host, cs) => {
-        Lifecycle.beginDetach(cs, LifecycleFlags.unbindAfterDetached).detach(sut).end();
+        AttachLifecycle.beginDetach(cs, AttachLifecycleFlags.unbindAfterDetached).detach(sut).end();
 
         const currentCount = sut.items && sut.items.length ? sut.items.length : sut.items === items ? count : sut.items === newItems ? newCount : 0;
 
         expect(sut.views.length).to.equal(currentCount, `execute4, sut.views.length 3`);
         expect(host.textContent).to.equal('', `execute4, host.textContent 3`);
 
-        sut.$unbind(BindingFlags.fromUnbind);
+        sut.$unbind(LifecycleFlags.fromUnbind);
 
         expect(sut.views.length).to.equal(currentCount, `execute4, sut.views.length 4`);
         expect(host.textContent).to.equal('', `execute4, host.textContent 4`);
@@ -470,7 +470,7 @@ describe(`Repeat`, () => {
     <(($1: [any, number, string, string], $2, $3, $4: [any, number, string, string], $5: [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string]) => [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([items, count], $2, $3, [newItems, newCount]) => [(sut, host) => {
-        sut.$unbind(BindingFlags.fromUnbind);
+        sut.$unbind(LifecycleFlags.fromUnbind);
 
         const currentCount = sut.items && sut.items.length ? sut.items.length : sut.items === items ? count : sut.items === newItems ? newCount : 0;
 

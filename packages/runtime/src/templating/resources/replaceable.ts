@@ -1,7 +1,7 @@
 import { inject } from '@aurelia/kernel';
 import { IRenderLocation } from '../../dom';
 import { IAttachLifecycle, IDetachLifecycle } from '../../lifecycle';
-import { BindingFlags } from '../../observation';
+import { LifecycleFlags } from '../../observation';
 import { ICustomAttribute, templateController } from '../custom-attribute';
 import { IView, IViewFactory } from '../view';
 
@@ -16,19 +16,19 @@ export class Replaceable {
     this.currentView.hold(location);
   }
 
-  public binding(flags: BindingFlags): void {
+  public binding(flags: LifecycleFlags): void {
     this.currentView.$bind(flags, this.$scope);
   }
 
-  public attaching(encapsulationSource: any, lifecycle: IAttachLifecycle): void {
-    this.currentView.$attach(encapsulationSource, lifecycle);
+  public attaching(encapsulationSource: any, flags: LifecycleFlags): void {
+    this.currentView.$attach(encapsulationSource, flags);
   }
 
-  public detaching(lifecycle: IDetachLifecycle): void {
-    this.currentView.$detach(lifecycle);
+  public detaching(flags: LifecycleFlags): void {
+    this.currentView.$detach(flags);
   }
 
-  public unbinding(flags: BindingFlags): void {
+  public unbinding(flags: LifecycleFlags): void {
     this.currentView.$unbind(flags);
   }
 }

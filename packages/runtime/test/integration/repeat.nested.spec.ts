@@ -14,15 +14,15 @@ import {
   IExpressionParser,
   Binding,
   IObservedArray,
-  BindingFlags,
+  LifecycleFlags,
   AccessScope,
   AccessMember,
   ViewFactory,
   ObservedCollection,
   RuntimeBehavior,
   ObserverLocator,
-  Lifecycle,
-  LifecycleFlags,
+  AttachLifecycle,
+  AttachLifecycleFlags,
   LinkedChangeList,
   IView,
   Interpolation,
@@ -87,13 +87,13 @@ describe(`Repeat`, () => {
     <(($1: [any, number, boolean, string, string, string]) => [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([items, count, show, trueValue, falseValue]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromBind, createScopeForTest({ show }));
+        sut.$bind(LifecycleFlags.fromBind, createScopeForTest({ show }));
 
         expect(sut.views.length).to.equal(count, `execute1, sut.views.length`);
         expect(host.textContent).to.equal('', `execute1, host.textContent`);
         verifyViewBindingContexts(sut.views, items);
 
-        Lifecycle.beginAttach(cs, host, LifecycleFlags.none).attach(sut).end();
+        AttachLifecycle.beginAttach(cs, host, AttachLifecycleFlags.none).attach(sut).end();
 
         expect(sut.views.length).to.equal(count, `execute1, sut.views.length`);
         expect(sut.$scope.bindingContext.show).to.equal(show);
@@ -102,13 +102,13 @@ describe(`Repeat`, () => {
       }, `$bind(fromBind)  -> $attach(none)`],
 
       ([items, count, show, trueValue, falseValue]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromFlushChanges, createScopeForTest({ show }));
+        sut.$bind(LifecycleFlags.fromFlushChanges, createScopeForTest({ show }));
 
         expect(sut.views.length).to.equal(count, `execute1, sut.views.length`);
         expect(host.textContent).to.equal('', `execute1, host.textContent`);
         verifyViewBindingContexts(sut.views, items);
 
-        Lifecycle.beginAttach(cs, host, LifecycleFlags.none).attach(sut).end();
+        AttachLifecycle.beginAttach(cs, host, AttachLifecycleFlags.none).attach(sut).end();
 
         expect(sut.$scope.bindingContext.show).to.equal(show);
         expect(host.textContent).to.equal(sut.$scope.bindingContext.show ? trueValue : falseValue, `execute1, host.textContent`);
@@ -119,7 +119,7 @@ describe(`Repeat`, () => {
     <(($1: [any, number, boolean, string, string, string]) => [(sut: Repeat, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([items, count, show, trueValue, falseValue]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromBind, sut.$scope);
+        sut.$bind(LifecycleFlags.fromBind, sut.$scope);
 
         expect(sut.views.length).to.equal(count, `execute1, sut.views.length`);
         verifyViewBindingContexts(sut.views, items);
@@ -130,7 +130,7 @@ describe(`Repeat`, () => {
       }, `$bind(fromBind), same scope`],
 
       ([items, count, show, trueValue, falseValue]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromBind, createScopeForTest({ show }));
+        sut.$bind(LifecycleFlags.fromBind, createScopeForTest({ show }));
 
         expect(sut.views.length).to.equal(count, `execute1, sut.views.length`);
         verifyViewBindingContexts(sut.views, items);
@@ -145,7 +145,7 @@ describe(`Repeat`, () => {
       }, `$bind(fromBind), new scope `],
 
       ([items, count, show, trueValue, falseValue]) => [(sut, host, cs) => {
-        sut.$bind(BindingFlags.fromFlushChanges, createScopeForTest({ show }));
+        sut.$bind(LifecycleFlags.fromFlushChanges, createScopeForTest({ show }));
 
         expect(sut.views.length).to.equal(count, `execute1, sut.views.length`);
         verifyViewBindingContexts(sut.views, items);
@@ -189,7 +189,7 @@ describe(`Repeat`, () => {
 
       // ([items, count, show, trueValue, falseValue]) => [(sut, host, cs) => {
       //   const newItems = sut.items = [{if:'a',else:'b'}];
-      //   sut.itemsChanged(newItems, items, BindingFlags.updateTargetInstance);
+      //   sut.itemsChanged(newItems, items, LifecycleFlags.updateTargetInstance);
       //   verifyViewBindingContexts(sut.views, newItems);
 
       //   cs.flushChanges();

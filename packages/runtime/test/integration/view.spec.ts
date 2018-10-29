@@ -9,14 +9,14 @@ import {
   IView,
   DetachLifecycleController,
   ViewFactory,
-  BindingFlags,
+  LifecycleFlags,
   View,
   IAttachLifecycle,
   INode,
   AttachLifecycleController,
-  LifecycleFlags,
+  AttachLifecycleFlags,
   IDetachLifecycle,
-  Lifecycle,
+  AttachLifecycle,
   IAttachLifecycleController,
   IDetachLifecycleController,
   IRenderLocation,
@@ -156,7 +156,7 @@ const expressions = {
 describe(`View`, () => {
   eachCartesianJoinFactory<
     [string, View, ITemplate, ViewFactory, IChangeSet, boolean],
-    [string, BindingFlags, IScope],
+    [string, LifecycleFlags, IScope],
     [string, (sut: View) => void],
     [string, IRenderLocation],
     [string, (sut: View) => void],
@@ -165,7 +165,7 @@ describe(`View`, () => {
     [string, (sut: View) => void],
     [string, IDetachLifecycleController],
     [string, (sut: View) => void],
-    [string, BindingFlags],
+    [string, LifecycleFlags],
     [string, (sut: View) => void],
     void
   >(
@@ -218,7 +218,7 @@ describe(`View`, () => {
         }
       ],
       [
-        () => [`fromBind, {text:'foo'}`, BindingFlags.fromBind, Scope.create({text:'foo'}, null)]
+        () => [`fromBind, {text:'foo'}`, LifecycleFlags.fromBind, Scope.create({text:'foo'}, null)]
       ],
       [
         () => [`       noop`, PLATFORM.noop],
@@ -295,7 +295,7 @@ describe(`View`, () => {
       [
         ([$11, $12, $13, $14, changeSet]) => {
           const encapsulationSource = document.createElement('div');
-          return [`AttachLifecycle(div, none)`, encapsulationSource, Lifecycle.beginAttach(changeSet, encapsulationSource, LifecycleFlags.none)]
+          return [`AttachLifecycle(div, none)`, encapsulationSource, AttachLifecycle.beginAttach(changeSet, encapsulationSource, AttachLifecycleFlags.none)]
         }
       ],
       [
@@ -327,7 +327,7 @@ describe(`View`, () => {
           // verify short-circuit if already attached
           //const def = sut.$encapsulationSource;
           sut.$encapsulationSource = null;
-          sut.$attach(source, <any>lifecycle);
+          sut.$attach(source, <any>flags);
           expect(sut.$encapsulationSource).to.equal(null, 'sut.$encapsulationSource');
           //sut.$encapsulationSource = def;
         }]
@@ -339,7 +339,7 @@ describe(`View`, () => {
         }]
       ],
       [
-        ([$11, $12, $13, $14, changeSet]) => [`DetachLifecycle(none)`, new DetachLifecycleController(changeSet, LifecycleFlags.none)]
+        ([$11, $12, $13, $14, changeSet]) => [`DetachLifecycle(none)`, new DetachLifecycleController(changeSet, AttachLifecycleFlags.none)]
       ],
       [
         () => [`   noop`, PLATFORM.noop],
@@ -352,7 +352,7 @@ describe(`View`, () => {
 
             // verify short-circuit if already detached
             const s = spy(lifecycle, <any>'queueUnmount');
-            sut.$detach(<any>lifecycle);
+            sut.$detach(<any>flags);
             expect(s).not.to.have.been.called;
             s.restore();
           } else {
@@ -379,7 +379,7 @@ describe(`View`, () => {
         }]
       ],
       [
-        () => [`fromUnbind`, BindingFlags.fromBind]
+        () => [`fromUnbind`, LifecycleFlags.fromBind]
       ],
       [
         () => [`   noop`, PLATFORM.noop],

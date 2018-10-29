@@ -1,4 +1,4 @@
-import { AttachLifecycleController, LifecycleFlags, Lifecycle, DetachLifecycleController, LinkedChangeList, LifecycleState } from '../../../src/index';
+import { AttachLifecycleController, AttachLifecycleFlags, AttachLifecycle, DetachLifecycleController, LinkedChangeList, LifecycleState } from '../../../src/index';
 import { eachCartesianJoinFactory } from '../util';
 import { LifecycleMock } from '../mock';
 import { expect } from 'chai';
@@ -148,16 +148,16 @@ function verifyCancelAsyncWorkCalls(offset: number, count: number, mock: Lifecyc
 describe(`AttachLifecycleController `, () => {
 
   eachCartesianJoinFactory<
-    [string, LifecycleFlags],
+    [string, AttachLifecycleFlags],
     [string, AttachLifecycleController],
     [number, LifecycleMock],
     [string, (count: number, sut: AttachLifecycleController, mock: LifecycleMock) => Promise<void>],
     void
   >([
       [
-        () => [`flags=none   `, LifecycleFlags.none               ],
-        () => [`flags=noTasks`, LifecycleFlags.noTasks            ],
-        () => [`flags=unbind `, LifecycleFlags.unbindAfterDetached]
+        () => [`flags=none   `, AttachLifecycleFlags.none               ],
+        () => [`flags=noTasks`, AttachLifecycleFlags.noTasks            ],
+        () => [`flags=unbind `, AttachLifecycleFlags.unbindAfterDetached]
       ],
       [
         ([text, flags]) => [
@@ -232,7 +232,7 @@ describe(`AttachLifecycleController `, () => {
 
             const task = sut.end();
 
-            expect(task).to.equal(Lifecycle.done);
+            expect(task).to.equal(AttachLifecycle.done);
             verifyAddNodesCalls(count, count, mock);
             verifyAttachedCalls(count * 2, count, mock);
           }
@@ -250,7 +250,7 @@ describe(`AttachLifecycleController `, () => {
 
             const task = sut.end();
 
-            expect(task).not.to.equal(Lifecycle.done);
+            expect(task).not.to.equal(AttachLifecycle.done);
             expect(task.done).to.be.false;
             expect(task.canCancel()).to.be.true;
 
@@ -279,7 +279,7 @@ describe(`AttachLifecycleController `, () => {
 
             const task = sut.end();
 
-            expect(task).not.to.equal(Lifecycle.done);
+            expect(task).not.to.equal(AttachLifecycle.done);
             expect(task.done).to.be.false;
             expect(task.canCancel()).to.be.true;
 
@@ -308,7 +308,7 @@ describe(`AttachLifecycleController `, () => {
 describe(`DetachLifecycleController `, () => {
 
   eachCartesianJoinFactory<
-    [string, LifecycleFlags],
+    [string, AttachLifecycleFlags],
     [string, DetachLifecycleController],
     [number, LifecycleMock],
     [string, (count: number, sut: DetachLifecycleController, mock: LifecycleMock) => void],
@@ -316,9 +316,9 @@ describe(`DetachLifecycleController `, () => {
     void
   >([
       [
-        () => [`flags=none   `, LifecycleFlags.none               ],
-        () => [`flags=noTasks`, LifecycleFlags.noTasks            ],
-        () => [`flags=unbind `, LifecycleFlags.unbindAfterDetached]
+        () => [`flags=none   `, AttachLifecycleFlags.none               ],
+        () => [`flags=noTasks`, AttachLifecycleFlags.noTasks            ],
+        () => [`flags=unbind `, AttachLifecycleFlags.unbindAfterDetached]
       ],
       [
         ([text, flags]) => [
@@ -403,7 +403,7 @@ describe(`DetachLifecycleController `, () => {
 
             const task = sut.end();
 
-            expect(task).to.equal(Lifecycle.done);
+            expect(task).to.equal(AttachLifecycle.done);
 
             verifyRemoveNodesCalls(count, count, mock);
 
@@ -412,13 +412,13 @@ describe(`DetachLifecycleController `, () => {
             // This can of course be removed once everything has stabilized and we're ready for releasing
             // verifyDetachedCalls(count * 2, count, mock);
 
-            // if (sut.flags === LifecycleFlags.unbindAfterDetached) {
+            // if (sut.flags === AttachLifecycleFlags.unbindAfterDetached) {
             //   verifyUnbindCalls(count * 3, count, mock);
             // }
             // the commented-out assertion further below should replace the assertion directly below
             verifyDetachedCalls(count + 1, count, mock);
 
-            if (sut.flags === LifecycleFlags.unbindAfterDetached) {
+            if (sut.flags === AttachLifecycleFlags.unbindAfterDetached) {
               verifyUnbindCalls(count * 2 + 1, count, mock);
             }
           }
@@ -436,7 +436,7 @@ describe(`DetachLifecycleController `, () => {
 
             const task = sut.end();
 
-            expect(task).not.to.equal(Lifecycle.done);
+            expect(task).not.to.equal(AttachLifecycle.done);
             expect(task.done).to.be.false;
             expect(task.canCancel()).to.be.true;
 
@@ -455,13 +455,13 @@ describe(`DetachLifecycleController `, () => {
             // This can of course be removed once everything has stabilized and we're ready for releasing
             // verifyDetachedCalls(count * 5, count, mock);
 
-            // if (sut.flags === LifecycleFlags.unbindAfterDetached) {
+            // if (sut.flags === AttachLifecycleFlags.unbindAfterDetached) {
             //   verifyUnbindCalls(count * 6, count, mock);
             // }
 
             verifyDetachedCalls(count * 4 + 1, count, mock);
 
-            if (sut.flags === LifecycleFlags.unbindAfterDetached) {
+            if (sut.flags === AttachLifecycleFlags.unbindAfterDetached) {
               verifyUnbindCalls(count * 5 + 1, count, mock);
             }
           }
@@ -479,7 +479,7 @@ describe(`DetachLifecycleController `, () => {
 
             const task = sut.end();
 
-            expect(task).not.to.equal(Lifecycle.done);
+            expect(task).not.to.equal(AttachLifecycle.done);
             expect(task.done).to.be.false;
             expect(task.canCancel()).to.be.true;
 
@@ -499,12 +499,12 @@ describe(`DetachLifecycleController `, () => {
             // This can of course be removed once everything has stabilized and we're ready for releasing
             // verifyDetachedCalls(count * 5, count, mock);
 
-            // if (sut.flags === LifecycleFlags.unbindAfterDetached) {
+            // if (sut.flags === AttachLifecycleFlags.unbindAfterDetached) {
             //   verifyUnbindCalls(count * 6, count, mock);
             // }
             verifyDetachedCalls(count * 4 + 1, count, mock);
 
-            if (sut.flags === LifecycleFlags.unbindAfterDetached) {
+            if (sut.flags === AttachLifecycleFlags.unbindAfterDetached) {
               verifyUnbindCalls(count * 5 + 1, count, mock);
             }
           }

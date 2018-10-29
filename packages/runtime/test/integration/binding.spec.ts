@@ -1,6 +1,6 @@
 import { BindingContext, Scope } from '../../src/binding/binding-context';
 import { spy, SinonSpy } from 'sinon';
-import { AccessMember, PrimitiveLiteral, IExpression, ExpressionKind, IBindingTargetObserver, Binding, IBindingTarget, IObserverLocator, AccessScope, BindingMode, BindingFlags, IScope, IChangeSet, SubscriberFlags, IPropertySubscriber, IPropertyChangeNotifier, SetterObserver, ObjectLiteral, PropertyAccessor, BindingType, LifecycleState } from '../../src/index';
+import { AccessMember, PrimitiveLiteral, IExpression, ExpressionKind, IBindingTargetObserver, Binding, IBindingTarget, IObserverLocator, AccessScope, BindingMode, LifecycleFlags, IScope, IChangeSet, SubscriberFlags, IPropertySubscriber, IPropertyChangeNotifier, SetterObserver, ObjectLiteral, PropertyAccessor, BindingType, LifecycleState } from '../../src/index';
 import { DI } from '../../../kernel/src/index';
 import { createScopeForTest } from '../unit/binding/shared';
 import { expect } from 'chai';
@@ -85,7 +85,7 @@ describe('Binding', () => {
     const sut = new Binding(<any>expr, target, 'val', BindingMode.toView, observerLocator, container);
     const scope = Scope.create(ctx, null);
 
-    sut.$bind(BindingFlags.fromBind, scope);
+    sut.$bind(LifecycleFlags.fromBind, scope);
 
     expect(target.val).to.equal(count);
 
@@ -101,7 +101,7 @@ describe('Binding', () => {
     }
     const scope2 = Scope.create(ctx2, null);
 
-    sut.$bind(BindingFlags.fromBind, scope2);
+    sut.$bind(LifecycleFlags.fromBind, scope2);
 
     expect(target.val).to.equal(count * 3);
   }).timeout(20000);
@@ -124,10 +124,10 @@ describe('Binding', () => {
           () => [new PrimitiveLiteral(null),                               `null       `],
           () => [new PrimitiveLiteral(undefined),                          `undefined  `]
         ],
-        <(() => [BindingFlags, string])[]>[
-          () => [BindingFlags.fromBind,                                            `fromBind               `],
-          () => [BindingFlags.updateTargetInstance,                                `updateTarget           `],
-          () => [BindingFlags.updateTargetInstance | BindingFlags.fromFlushChanges,`updateTarget|fromFlush `]
+        <(() => [LifecycleFlags, string])[]>[
+          () => [LifecycleFlags.fromBind,                                            `fromBind               `],
+          () => [LifecycleFlags.updateTargetInstance,                                `updateTarget           `],
+          () => [LifecycleFlags.updateTargetInstance | LifecycleFlags.fromFlushChanges,`updateTarget|fromFlush `]
         ],
         <(() => [IScope, string])[]>[
           () => [createScopeForTest({foo: {bar: {}}}),       `{foo:{bar:{}}}       `],
@@ -141,7 +141,7 @@ describe('Binding', () => {
         it(`$bind() [one-time]  target=${$1} prop=${$2} expr=${$3} flags=${$4} scope=${$5}`, () => {
           // - Arrange -
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.oneTime);
-          const srcVal = expr.evaluate(BindingFlags.none, scope, container);
+          const srcVal = expr.evaluate(LifecycleFlags.none, scope, container);
           const targetObserver = observerLocator.getAccessor(target, prop);
           const stub = sinon.stub(observerLocator, 'getAccessor').returns(targetObserver);
           stub.withArgs(target, prop);
@@ -191,10 +191,10 @@ describe('Binding', () => {
           () => [new PrimitiveLiteral(null),                               `null       `],
           () => [new PrimitiveLiteral(undefined),                          `undefined  `]
         ],
-        <(() => [BindingFlags, string])[]>[
-          () => [BindingFlags.fromBind,                                            `fromBind               `],
-          () => [BindingFlags.updateTargetInstance,                                `updateTarget           `],
-          () => [BindingFlags.updateTargetInstance | BindingFlags.fromFlushChanges,`updateTarget|fromFlush `]
+        <(() => [LifecycleFlags, string])[]>[
+          () => [LifecycleFlags.fromBind,                                            `fromBind               `],
+          () => [LifecycleFlags.updateTargetInstance,                                `updateTarget           `],
+          () => [LifecycleFlags.updateTargetInstance | LifecycleFlags.fromFlushChanges,`updateTarget|fromFlush `]
         ],
         <(() => [IScope, string])[]>[
           () => [createScopeForTest({foo: {bar: {}}}),       `{foo:{bar:{}}}       `],
@@ -208,7 +208,7 @@ describe('Binding', () => {
         it(`$bind() [to-view]  target=${$1} prop=${$2} expr=${$3} flags=${$4} scope=${$5}`, () => {
           // - Arrange - Part 1
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.toView);
-          const srcVal = expr.evaluate(BindingFlags.none, scope, container);
+          const srcVal = expr.evaluate(LifecycleFlags.none, scope, container);
           const targetObserver = observerLocator.getAccessor(target, prop);
 
           const stub = sinon.stub(observerLocator, 'getAccessor').returns(targetObserver);
@@ -321,7 +321,7 @@ describe('Binding', () => {
 
           if (observer00) {
             // verify the behavior of the sourceExpression / sourceObserver (redundant)
-            flags = BindingFlags.updateTargetInstance;
+            flags = LifecycleFlags.updateTargetInstance;
             if (observer01) {
               expect(observer00.setValue).not.to.have.been.called;
               expect(observer01.setValue).to.have.been.calledOnce;
@@ -403,10 +403,10 @@ describe('Binding', () => {
         <(() => [IExpression, string])[]>[
           () => [new AccessScope('foo'), `foo `]
         ],
-        <(() => [BindingFlags, string])[]>[
-          () => [BindingFlags.fromBind,                                            `fromBind               `],
-          () => [BindingFlags.updateTargetInstance,                                `updateTarget           `],
-          () => [BindingFlags.updateTargetInstance | BindingFlags.fromFlushChanges,`updateTarget|fromFlush `]
+        <(() => [LifecycleFlags, string])[]>[
+          () => [LifecycleFlags.fromBind,                                            `fromBind               `],
+          () => [LifecycleFlags.updateTargetInstance,                                `updateTarget           `],
+          () => [LifecycleFlags.updateTargetInstance | LifecycleFlags.fromFlushChanges,`updateTarget|fromFlush `]
         ],
         <(() => [IScope, string])[]>[
           () => [createScopeForTest({foo: {}}), `{foo:{}} `]
@@ -450,7 +450,7 @@ describe('Binding', () => {
           massSpy(sut, 'handleChange');
           massSpy(expr, 'evaluate', 'assign');
 
-          flags = BindingFlags.updateSourceExpression;
+          flags = LifecycleFlags.updateSourceExpression;
 
           // - Act - Part 2
           targetObserver.setValue(newValue, flags);
@@ -513,9 +513,9 @@ describe('Binding', () => {
           () => [new PrimitiveLiteral(null),                               `null       `],
           () => [new PrimitiveLiteral(undefined),                          `undefined  `]
         ],
-        <(() => [BindingFlags, string])[]>[
-          () => [BindingFlags.fromBind,             `fromBind     `],
-          () => [BindingFlags.updateTargetInstance, `updateTarget `]
+        <(() => [LifecycleFlags, string])[]>[
+          () => [LifecycleFlags.fromBind,             `fromBind     `],
+          () => [LifecycleFlags.updateTargetInstance, `updateTarget `]
         ],
         <(() => [IScope, string])[]>[
           () => [createScopeForTest({foo: {}}),              `{foo:{}} `],
@@ -531,7 +531,7 @@ describe('Binding', () => {
           const originalScope = JSON.parse(JSON.stringify(scope));
           // - Arrange - Part 1
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.twoWay);
-          const srcVal = expr.evaluate(BindingFlags.none, scope, container);
+          const srcVal = expr.evaluate(LifecycleFlags.none, scope, container);
           const targetObserver = observerLocator.getObserver(target, prop) as IBindingTargetObserver;
 
           massSpy(targetObserver, 'setValue', 'getValue', 'callSubscribers', 'subscribe');
@@ -610,7 +610,7 @@ describe('Binding', () => {
             expect(targetObserver.currentValue).to.equal(srcVal);
           }
 
-          if (!(flags & BindingFlags.fromBind)) {
+          if (!(flags & LifecycleFlags.fromBind)) {
             expect(targetObserver.callSubscribers).to.have.been.calledOnce;
           } else {
             expect(targetObserver.callSubscribers).not.to.have.been.called;
@@ -667,7 +667,7 @@ describe('Binding', () => {
 
           if (observer00) {
             // verify the behavior of the sourceExpression / sourceObserver (redundant)
-            flags = BindingFlags.updateTargetInstance;
+            flags = LifecycleFlags.updateTargetInstance;
             if (observer01) {
               expect(observer00.setValue).not.to.have.been.called;
               expect(observer01.setValue).to.have.been.calledOnce;
@@ -742,7 +742,7 @@ describe('Binding', () => {
           massSpy(sut, 'handleChange');
           massSpy(expr, 'evaluate', 'assign');
 
-          flags = BindingFlags.updateSourceExpression;
+          flags = LifecycleFlags.updateSourceExpression;
 
           // - Act - Part 3
           targetObserver.setValue(newValue2, flags);
@@ -780,7 +780,7 @@ describe('Binding', () => {
       const { sut } = setup();
       const scope: any = {};
       sut['$scope'] = scope;
-      sut.$unbind(BindingFlags.fromUnbind);
+      sut.$unbind(LifecycleFlags.fromUnbind);
       expect(sut['$scope'] === scope).to.be.true;
     });
 
@@ -793,11 +793,11 @@ describe('Binding', () => {
       const unobserveSpy = spy(sut, 'unobserve');
       const unbindSpy = dummySourceExpression.unbind = spy();
       (<any>dummySourceExpression).$kind |= ExpressionKind.HasUnbind;
-      sut.$unbind(BindingFlags.fromUnbind);
+      sut.$unbind(LifecycleFlags.fromUnbind);
       expect(sut['$scope']).to.be.null;
       expect(sut['$state'] & LifecycleState.isBound).to.equal(0);
       expect(unobserveSpy).to.have.been.calledWith(true);
-      expect(unbindSpy).to.have.been.calledWith(BindingFlags.fromUnbind, scope, sut);
+      expect(unbindSpy).to.have.been.calledWith(LifecycleFlags.fromUnbind, scope, sut);
     });
   });
 

@@ -1,7 +1,7 @@
 import { IIndexable, Primitive } from '@aurelia/kernel';
 import { DOM, IElement, IInputElement, INode, INodeObserver } from '../dom';
 import {
-  BindingFlags, CollectionKind, IBatchedCollectionSubscriber, IBindingTargetObserver,
+  LifecycleFlags, CollectionKind, IBatchedCollectionSubscriber, IBindingTargetObserver,
   IChangeSet, ICollectionObserver, IndexMap,  IObserversLookup, IPropertySubscriber
 } from '../observation';
 import { IEventSubscriber } from './event-manager';
@@ -34,7 +34,7 @@ const inputValueDefaults = {
   ['week']: ''
 };
 
-const handleEventFlags = BindingFlags.fromDOMEvent | BindingFlags.updateSourceExpression;
+const handleEventFlags = LifecycleFlags.fromDOMEvent | LifecycleFlags.updateSourceExpression;
 
 export interface ValueAttributeObserver extends
   IBindingTargetObserver<INode, string, Primitive | IIndexable> { }
@@ -42,7 +42,7 @@ export interface ValueAttributeObserver extends
 @targetObserver('')
 export class ValueAttributeObserver implements ValueAttributeObserver {
   public currentValue: Primitive | IIndexable;
-  public currentFlags: BindingFlags;
+  public currentFlags: LifecycleFlags;
   public oldValue: Primitive | IIndexable;
   public defaultValue: Primitive | IIndexable;
 
@@ -74,9 +74,9 @@ export class ValueAttributeObserver implements ValueAttributeObserver {
     return this.obj[this.propertyKey];
   }
 
-  public setValueCore(newValue: Primitive | IIndexable, flags: BindingFlags): void {
+  public setValueCore(newValue: Primitive | IIndexable, flags: LifecycleFlags): void {
     this.obj[this.propertyKey] = newValue;
-    if (flags & BindingFlags.fromBind) {
+    if (flags & LifecycleFlags.fromBind) {
       return;
     }
     this.callSubscribers(this.currentValue, this.oldValue, flags);
@@ -119,7 +119,7 @@ export class ValueAttributeObserver implements ValueAttributeObserver {
 ValueAttributeObserver.prototype.propertyKey = '';
 ValueAttributeObserver.prototype.handler = null;
 
-const defaultHandleBatchedChangeFlags = BindingFlags.fromFlushChanges | BindingFlags.updateTargetInstance;
+const defaultHandleBatchedChangeFlags = LifecycleFlags.fromFlushChanges | LifecycleFlags.updateTargetInstance;
 
 interface IInternalInputElement extends IInputElement {
   matcher?: typeof defaultMatcher;
@@ -138,7 +138,7 @@ export interface CheckedObserver extends
 @targetObserver()
 export class CheckedObserver implements CheckedObserver {
   public currentValue: Primitive | IIndexable;
-  public currentFlags: BindingFlags;
+  public currentFlags: LifecycleFlags;
   public oldValue: Primitive | IIndexable;
   public defaultValue: Primitive | IIndexable;
 
@@ -158,7 +158,7 @@ export class CheckedObserver implements CheckedObserver {
     return this.currentValue;
   }
 
-  public setValueCore(newValue: Primitive | IIndexable, flags: BindingFlags): void {
+  public setValueCore(newValue: Primitive | IIndexable, flags: LifecycleFlags): void {
     if (!this.valueObserver) {
       this.valueObserver = this.obj['$observers'] && (this.obj['$observers'].model || this.obj['$observers'].value);
       if (this.valueObserver) {
@@ -183,7 +183,7 @@ export class CheckedObserver implements CheckedObserver {
   }
 
   // handlePropertyChange (todo: rename normal subscribe methods in target observers to batched, since that's what they really are)
-  public handleChange(newValue: Primitive | IIndexable, previousValue: Primitive | IIndexable, flags: BindingFlags): void {
+  public handleChange(newValue: Primitive | IIndexable, previousValue: Primitive | IIndexable, flags: LifecycleFlags): void {
     this.synchronizeElement();
     this.notify(flags);
   }
@@ -206,8 +206,8 @@ export class CheckedObserver implements CheckedObserver {
     }
   }
 
-  public notify(flags: BindingFlags): void {
-    if (flags & BindingFlags.fromBind) {
+  public notify(flags: LifecycleFlags): void {
+    if (flags & LifecycleFlags.fromBind) {
       return;
     }
     const oldValue = this.oldValue;
@@ -306,7 +306,7 @@ export interface SelectValueObserver extends
 @targetObserver()
 export class SelectValueObserver implements SelectValueObserver {
   public currentValue: Primitive | IIndexable | UntypedArray;
-  public currentFlags: BindingFlags;
+  public currentFlags: LifecycleFlags;
   public oldValue: Primitive | IIndexable | UntypedArray;
   public defaultValue: Primitive | UntypedArray;
 
@@ -326,7 +326,7 @@ export class SelectValueObserver implements SelectValueObserver {
     return this.currentValue;
   }
 
-  public setValueCore(newValue: Primitive | UntypedArray, flags: BindingFlags): void {
+  public setValueCore(newValue: Primitive | UntypedArray, flags: LifecycleFlags): void {
     const isArray = Array.isArray(newValue);
     if (!isArray && newValue !== null && newValue !== undefined && this.obj.multiple) {
       throw new Error('Only null or Array instances can be bound to a multi-select.');
@@ -351,12 +351,12 @@ export class SelectValueObserver implements SelectValueObserver {
   }
 
   // called when a different value was assigned
-  public handleChange(newValue: Primitive | UntypedArray, previousValue: Primitive | UntypedArray, flags: BindingFlags): void {
+  public handleChange(newValue: Primitive | UntypedArray, previousValue: Primitive | UntypedArray, flags: LifecycleFlags): void {
     this.setValue(newValue, flags);
   }
 
-  public notify(flags: BindingFlags): void {
-    if (flags & BindingFlags.fromBind) {
+  public notify(flags: LifecycleFlags): void {
+    if (flags & LifecycleFlags.fromBind) {
       return;
     }
     const oldValue = this.oldValue;

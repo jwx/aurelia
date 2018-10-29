@@ -62,7 +62,7 @@ describe('@customAttribute', () => {
 
         let queueAttachedCallbackCalled = false;
         let queueAttachedCallbackRequestor;
-        const lifecycle: IAttachLifecycle = <any>{
+        const flags: LifecycleFlags = <any>{
           queueAttachedCallback(requestor: CustomAttribute) {
             queueAttachedCallbackCalled = true;
             queueAttachedCallbackRequestor = requestor;
@@ -71,7 +71,7 @@ describe('@customAttribute', () => {
         };
 
         // Act
-        sut.$attach(encapsulationSource, lifecycle);
+        sut.$attach(encapsulationSource, flags);
 
         // Assert
         if (propsSpec.callsBehaviors) {
@@ -81,7 +81,7 @@ describe('@customAttribute', () => {
             expect(queueAttachedCallbackRequestor).to.equal(sut, 'queueAttachedCallbackRequestor')
           }
           if (behavior.hooks & LifecycleHooks.hasAttaching) {
-            sut.verifyAttachingCalled(encapsulationSource, lifecycle);
+            sut.verifyAttachingCalled(encapsulationSource, flags);
           }
         } else {
           expect(queueAttachedCallbackCalled).to.equal(false, 'queueAttachedCallbackCalled');
@@ -148,7 +148,7 @@ describe('@customAttribute', () => {
 
         let queueDetachedCallbackCalled = false;
         let queueDetachedCallbackRequestor;
-        const lifecycle: IDetachLifecycle = <any>{
+        const flags: LifecycleFlags = <any>{
           queueDetachedCallback(requestor: CustomAttribute) {
             queueDetachedCallbackCalled = true;
             queueDetachedCallbackRequestor = requestor;
@@ -157,7 +157,7 @@ describe('@customAttribute', () => {
         };
 
         // Act
-        sut.$detach(lifecycle);
+        sut.$detach(flags);
 
         // Assert
         if (propsSpec.callsBehaviors) {
@@ -167,7 +167,7 @@ describe('@customAttribute', () => {
             expect(queueDetachedCallbackRequestor).to.equal(sut, 'queueDetachedCallbackRequestor')
           }
           if (behavior.hooks & LifecycleHooks.hasDetaching) {
-            sut.verifyDetachingCalled(lifecycle);
+            sut.verifyDetachingCalled(flags);
           }
         } else {
           expect(queueDetachedCallbackCalled).to.equal(false, 'queueDetachedCallbackCalled');

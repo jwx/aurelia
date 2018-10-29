@@ -9,7 +9,7 @@ import {
   CallMember, CallScope, Conditional,
   ArrayLiteral, ObjectLiteral, PrimitiveLiteral, Template,
   Unary, ValueConverter, TaggedTemplate, BindingContext,
-  BindingFlags, IsPrimary, IsBindingBehavior, IsLeftHandSide,
+  LifecycleFlags, IsPrimary, IsBindingBehavior, IsLeftHandSide,
   IsValueConverter, IsAssign, IsConditional, IsBinary, IsUnary,
   IScope, isPureLiteral, Binding, ObserverLocator, LinkedChangeList,
   connects, HtmlLiteral, ArrayBindingPattern, ObjectBindingPattern,
@@ -1020,7 +1020,7 @@ describe('AccessMember', () => {
       it(`${t1}.${t2}.evaluate() -> connect -> assign`, () => {
         const scope: any = createScopeForTest({ foo: obj });
         const expression = new AccessMember(new AccessScope('foo', 0), prop);
-        const actual = expression.evaluate(BindingFlags.none, scope, null);
+        const actual = expression.evaluate(LifecycleFlags.none, scope, null);
         if (canHaveProperty) {
           expect(actual).to.equal(value);
         } else {
@@ -1592,10 +1592,10 @@ describe('CallMember', () => {
   it('evaluate throws when mustEvaluate and member is null or undefined', () => {
     const expression = new CallMember(new AccessScope('foo', 0), 'bar', []);
     const mustEvaluate = true;
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({}), null)).to.throw();
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: {} }), null)).to.throw();
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: { bar: undefined } }), null)).to.throw();
-    expect(() => expression.evaluate(BindingFlags.mustEvaluate, createScopeForTest({ foo: { bar: null } }), null)).to.throw();
+    expect(() => expression.evaluate(LifecycleFlags.mustEvaluate, createScopeForTest({}), null)).to.throw();
+    expect(() => expression.evaluate(LifecycleFlags.mustEvaluate, createScopeForTest({ foo: {} }), null)).to.throw();
+    expect(() => expression.evaluate(LifecycleFlags.mustEvaluate, createScopeForTest({ foo: { bar: undefined } }), null)).to.throw();
+    expect(() => expression.evaluate(LifecycleFlags.mustEvaluate, createScopeForTest({ foo: { bar: null } }), null)).to.throw();
   });
 });
 
@@ -1619,8 +1619,8 @@ describe('CallScope', () => {
   it('throws when mustEvaluate and evaluating undefined bindingContext', () => {
     const scope: any = Scope.create(undefined, null);
     const mustEvaluate = true;
-    expect(() => foo.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
-    expect(() => hello.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
+    expect(() => foo.evaluate(LifecycleFlags.mustEvaluate, scope, null)).to.throw();
+    expect(() => hello.evaluate(LifecycleFlags.mustEvaluate, scope, null)).to.throw();
   });
 
   it('connects undefined bindingContext', () => {
@@ -1641,8 +1641,8 @@ describe('CallScope', () => {
   it('throws when mustEvaluate and evaluating null bindingContext', () => {
     const scope: any = Scope.create(null, null);
     const mustEvaluate = true;
-    expect(() => foo.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
-    expect(() => hello.evaluate(BindingFlags.mustEvaluate, scope, null)).to.throw();
+    expect(() => foo.evaluate(LifecycleFlags.mustEvaluate, scope, null)).to.throw();
+    expect(() => hello.evaluate(LifecycleFlags.mustEvaluate, scope, null)).to.throw();
   });
 
   it('connects null bindingContext', () => {
@@ -1890,7 +1890,7 @@ describe('Unary', () => {
 describe('BindingBehavior', () => {
 
   eachCartesianJoinFactory<
-    [/*title*/string, /*flags*/BindingFlags],
+    [/*title*/string, /*flags*/LifecycleFlags],
     [/*title*/string, /*$kind*/ExpressionKind],
     [/*title*/string, /*scope*/IScope, /*sut*/BindingBehavior, /*mock*/MockBindingBehavior, /*locator*/IServiceLocator, /*binding*/IConnectableBinding, /*value*/any, /*argValues*/any[]],
     /*bind*/() => void,
@@ -1902,10 +1902,10 @@ describe('BindingBehavior', () => {
     void
   >(
     [
-      // [/*title*/string, /*flags*/BindingFlags],
+      // [/*title*/string, /*flags*/LifecycleFlags],
       [
-        () => [`fromBind  `, BindingFlags.fromBind],
-        () => [`fromUnbind`, BindingFlags.fromUnbind]
+        () => [`fromBind  `, LifecycleFlags.fromBind],
+        () => [`fromUnbind`, LifecycleFlags.fromUnbind]
       ],
       // [/*title*/string, /*$kind*/ExpressionKind],
       [
@@ -2162,7 +2162,7 @@ describe('BindingBehavior', () => {
 describe('ValueConverter', () => {
 
   eachCartesianJoinFactory<
-    [/*title*/string, /*flags*/BindingFlags],
+    [/*title*/string, /*flags*/LifecycleFlags],
     [/*title*/string, /*signals*/string[], /*signaler*/MockSignaler],
     [/*title*/string, /*scope*/IScope, /*sut*/ValueConverter, /*mock*/MockValueConverter, /*locator*/IServiceLocator, /*binding*/IConnectableBinding, /*value*/any, /*argValues*/any[], /*methods*/string[]],
     /*evaluate*/() => void,
@@ -2173,10 +2173,10 @@ describe('ValueConverter', () => {
     void
   >(
     [
-      // [/*title*/string, /*flags*/BindingFlags],
+      // [/*title*/string, /*flags*/LifecycleFlags],
       [
-        () => [`fromBind  `, BindingFlags.fromBind],
-        () => [`fromUnbind`, BindingFlags.fromUnbind]
+        () => [`fromBind  `, LifecycleFlags.fromBind],
+        () => [`fromUnbind`, LifecycleFlags.fromUnbind]
       ],
       // [/*title*/string, /*signals*/string[], /*signaler*/ISignaler],
       [

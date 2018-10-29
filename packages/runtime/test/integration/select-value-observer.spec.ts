@@ -1,4 +1,4 @@
-import { IObserverLocator, IChangeSet, SelectValueObserver, BindingFlags, DOM } from '../../src/index';
+import { IObserverLocator, IChangeSet, SelectValueObserver, LifecycleFlags, DOM } from '../../src/index';
 import { createElement, _, eachCartesianJoin, eachCartesianJoinFactory, h, verifyEqual } from '../unit/util';
 import { expect } from 'chai';
 import { spy, SinonSpy } from 'sinon';
@@ -18,7 +18,7 @@ describe('SelectValueObserver', () => {
     const markup = `<select ${multiple ? 'multiple' : ''}>\n${optionElements}\n</select>`;
     const el = <HTMLSelectElement>createElement(markup);
     const sut = <SelectValueObserver>observerLocator.getObserver(el, 'value');
-    sut.setValue(initialValue, BindingFlags.none);
+    sut.setValue(initialValue, LifecycleFlags.none);
     changeSet.flushChanges();
 
     return { changeSet, el, sut };

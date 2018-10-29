@@ -14,7 +14,7 @@ import {
   IBindScope,
   IAttach,
   IScope,
-  BindingFlags,
+  LifecycleFlags,
   IDetachLifecycle,
   IAttachLifecycle,
   ICustomElementType,
@@ -96,49 +96,49 @@ export class MockCustomElement implements ICustomElement {
     this.$context.render(this, nodes.findTargets(), description, host);
   }
 
-  public $bind(flags: BindingFlags): void {
+  public $bind(flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.isBound) {
       return;
     }
     const scope = this.$scope;
     const bindables = this.$bindables;
     for (let i = 0, ii = bindables.length; i < ii; ++i) {
-      bindables[i].$bind(flags | BindingFlags.fromBind, scope);
+      bindables[i].$bind(flags | LifecycleFlags.fromBind, scope);
     }
     this.$state |= LifecycleState.isBound;
   }
 
-  public $unbind(flags: BindingFlags): void {
+  public $unbind(flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.isBound) {
       const bindables = this.$bindables;
       let i = bindables.length;
       while (i--) {
-        bindables[i].$unbind(flags | BindingFlags.fromUnbind);
+        bindables[i].$unbind(flags | LifecycleFlags.fromUnbind);
       }
       this.$state &= ~LifecycleState.isBound;
     }
   }
 
-  public $attach(encapsulationSource: Node, lifecycle: IAttachLifecycle): void {
+  public $attach(encapsulationSource: Node, flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.isAttached) {
       return;
     }
     this.$encapsulationSource = encapsulationSource;
     const attachables = this.$attachables;
     for (let i = 0, ii = attachables.length; i < ii; ++i) {
-      attachables[i].$attach(encapsulationSource, lifecycle);
+      attachables[i].$attach(encapsulationSource, flags);
     }
     lifecycle.queueMount(this);
     this.$state |= LifecycleState.isAttached;
   }
 
-  public $detach(lifecycle: IDetachLifecycle): void {
+  public $detach(flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.isAttached) {
       lifecycle.queueUnmount(this);
       const attachables = this.$attachables;
       let i = attachables.length;
       while (i--) {
-        attachables[i].$detach(lifecycle);
+        attachables[i].$detach(flags);
       }
       this.$state &= ~LifecycleState.isAttached;
     }
@@ -533,11 +533,11 @@ export class LifecycleMock implements IAttach, IBindScope, ILifecycleTask {
     }
   }
 
-  public $attach(encapsulationSource: Node, lifecycle: IAttachLifecycle): void {
-    this.trace('$attach', encapsulationSource, lifecycle);
+  public $attach(encapsulationSource: Node, flags: LifecycleFlags): void {
+    this.trace('$attach', encapsulationSource, flags);
     const children = this.children;
     for (let i = 0, ii = children.length; i < ii; ++i) {
-      children[i].$attach(encapsulationSource, lifecycle);
+      children[i].$attach(encapsulationSource, flags);
     }
     lifecycle.queueMount(this);
     this.$state |= LifecycleState.isAttached;
@@ -548,13 +548,13 @@ export class LifecycleMock implements IAttach, IBindScope, ILifecycleTask {
     this.trace('$mount');
   }
 
-  public $detach(lifecycle: IDetachLifecycle): void {
-    this.trace('$detach', lifecycle);
+  public $detach(flags: LifecycleFlags): void {
+    this.trace('$detach', flags);
     lifecycle.queueUnmount(this);
     const children = this.children;
     let i = children.length;
     while (i--) {
-      children[i].$detach(lifecycle);
+      children[i].$detach(flags);
     }
     this.$state &= ~LifecycleState.isAttached;
     lifecycle.queueDetachedCallback(this);
@@ -572,7 +572,7 @@ export class LifecycleMock implements IAttach, IBindScope, ILifecycleTask {
     }
   }
 
-  public $bind(flags: BindingFlags, scope: IScope): void {
+  public $bind(flags: LifecycleFlags, scope: IScope): void {
     this.trace('$bind', flags, scope);
     const children = this.children;
     for (let i = 0, ii = children.length; i < ii; ++i) {
@@ -581,7 +581,7 @@ export class LifecycleMock implements IAttach, IBindScope, ILifecycleTask {
     this.$state |= LifecycleState.isBound;
   }
 
-  public $unbind(flags: BindingFlags): void {
+  public $unbind(flags: LifecycleFlags): void {
     this.trace('$unbind', flags);
     const children = this.children;
     let i = children.length;
@@ -746,15 +746,15 @@ export function defineComponentLifecycleMock() {
       this.verifyStateBit(LifecycleState.isBound, false, 'created');
       this.verifyStateBit(LifecycleState.isAttached, false, 'created');
     }
-    public binding(flags: BindingFlags): void {
+    public binding(flags: LifecycleFlags): void {
       this.trace(`binding`, flags);
     }
-    public bound(flags: BindingFlags): void {
+    public bound(flags: LifecycleFlags): void {
       this.trace(`bound`, flags);
       this.verifyStateBit(LifecycleState.isBound, true, 'bound');
     }
-    public attaching(encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
-      this.trace(`attaching`, encapsulationSource, lifecycle);
+    public attaching(encapsulationSource: INode, flags: LifecycleFlags): void {
+      this.trace(`attaching`, encapsulationSource, flags);
       this.verifyStateBit(LifecycleState.isBound, true, 'attaching');
       this.verifyStateBit(LifecycleState.isAttached, false, 'attaching');
     }
@@ -763,8 +763,8 @@ export function defineComponentLifecycleMock() {
       this.verifyStateBit(LifecycleState.isBound, true, 'attached');
       this.verifyStateBit(LifecycleState.isAttached, true, 'attached');
     }
-    public detaching(lifecycle: IDetachLifecycle): void {
-      this.trace(`detaching`, lifecycle);
+    public detaching(flags: LifecycleFlags): void {
+      this.trace(`detaching`, flags);
       this.verifyStateBit(LifecycleState.isBound, true, 'detaching');
       this.verifyStateBit(LifecycleState.isAttached, true, 'detaching');
     }
@@ -773,11 +773,11 @@ export function defineComponentLifecycleMock() {
       this.verifyStateBit(LifecycleState.isBound, true, 'detached');
       this.verifyStateBit(LifecycleState.isAttached, false, 'detached');
     }
-    public unbinding(flags: BindingFlags): void {
+    public unbinding(flags: LifecycleFlags): void {
       this.trace(`unbinding`, flags);
       this.verifyStateBit(LifecycleState.isBound, true, 'detached');
     }
-    public unbound(flags: BindingFlags): void {
+    public unbound(flags: LifecycleFlags): void {
       this.trace(`unbound`, flags);
       this.verifyStateBit(LifecycleState.isBound, false, 'detached');
     }
@@ -828,28 +828,28 @@ export function defineComponentLifecycleMock() {
     public verifyCreatedCalled(): void {
       this.verifyLastCall('created');
     }
-    public verifyBindingCalled(flags: BindingFlags): void {
+    public verifyBindingCalled(flags: LifecycleFlags): void {
       this.verifyLastCall(`binding`, flags);
     }
-    public verifyBoundCalled(flags: BindingFlags): void {
+    public verifyBoundCalled(flags: LifecycleFlags): void {
       this.verifyLastCall(`bound`, flags);
     }
-    public verifyAttachingCalled(encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
-      this.verifyLastCall(`attaching`, encapsulationSource, lifecycle);
+    public verifyAttachingCalled(encapsulationSource: INode, flags: LifecycleFlags): void {
+      this.verifyLastCall(`attaching`, encapsulationSource, flags);
     }
     public verifyAttachedCalled(): void {
       this.verifyLastCall(`attached`);
     }
-    public verifyDetachingCalled(lifecycle: IDetachLifecycle): void {
-      this.verifyLastCall(`detaching`, lifecycle);
+    public verifyDetachingCalled(flags: LifecycleFlags): void {
+      this.verifyLastCall(`detaching`, flags);
     }
     public verifyDetachedCalled(): void {
       this.verifyLastCall(`detached`);
     }
-    public verifyUnbindingCalled(flags: BindingFlags): void {
+    public verifyUnbindingCalled(flags: LifecycleFlags): void {
       this.verifyLastCall(`unbinding`, flags);
     }
-    public verifyUnboundCalled(flags: BindingFlags): void {
+    public verifyUnboundCalled(flags: LifecycleFlags): void {
       this.verifyLastCall(`unbound`, flags);
     }
     public verifyRenderCalled(host: INode, parts: Record<string, Immutable<ITemplateDefinition>>): void {
@@ -900,7 +900,7 @@ export type IComponentLifecycleMock = InstanceType<ReturnType<typeof defineCompo
 export class MockPropertySubscriber {
   public calls: [keyof MockPropertySubscriber, ...any[]][] = [];
 
-  public handleChange(newValue: any, previousValue: any, flags: BindingFlags): void {
+  public handleChange(newValue: any, previousValue: any, flags: LifecycleFlags): void {
     this.trace(`handleChange`, newValue, previousValue, flags);
   }
 
@@ -927,11 +927,11 @@ export class MockExpression implements IExpression {
 export class MockBindingBehavior {
   public calls: [keyof MockBindingBehavior, ...any[]][] = [];
 
-  public bind(flags: BindingFlags, scope: IScope, binding: IBinding, ...rest: any[]): void {
+  public bind(flags: LifecycleFlags, scope: IScope, binding: IBinding, ...rest: any[]): void {
     this.trace('bind', flags, scope, binding, ...rest);
   }
 
-  public unbind(flags: BindingFlags, scope: IScope, binding: IBinding, ...rest: any[]): void {
+  public unbind(flags: LifecycleFlags, scope: IScope, binding: IBinding, ...rest: any[]): void {
     this.trace('unbind', flags, scope, binding, ...rest);
   }
 

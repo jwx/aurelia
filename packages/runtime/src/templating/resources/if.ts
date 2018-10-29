@@ -1,7 +1,7 @@
 import { inject } from '@aurelia/kernel';
 import { INode, IRenderLocation } from '../../dom';
 import { IAttachLifecycle, IDetachLifecycle } from '../../lifecycle';
-import { BindingFlags, IChangeSet } from '../../observation';
+import { LifecycleFlags, IChangeSet } from '../../observation';
 import { bindable } from '../bindable';
 import { ICustomAttribute, templateController } from '../custom-attribute';
 import { IView, IViewFactory } from '../view';
@@ -26,21 +26,21 @@ export class If {
     this.coordinator = new CompositionCoordinator(this.changeSet);
   }
 
-  public binding(flags: BindingFlags): void {
+  public binding(flags: LifecycleFlags): void {
     const view = this.updateView();
     this.coordinator.compose(view);
     this.coordinator.binding(flags, this.$scope);
   }
 
-  public attaching(encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
-    this.coordinator.attaching(encapsulationSource, lifecycle);
+  public attaching(encapsulationSource: INode, flags: LifecycleFlags): void {
+    this.coordinator.attaching(encapsulationSource, flags);
   }
 
-  public detaching(lifecycle: IDetachLifecycle): void {
-    this.coordinator.detaching(lifecycle);
+  public detaching(flags: LifecycleFlags): void {
+    this.coordinator.detaching(flags);
   }
 
-  public unbinding(flags: BindingFlags): void {
+  public unbinding(flags: LifecycleFlags): void {
     this.coordinator.unbinding(flags);
   }
 
@@ -56,8 +56,8 @@ export class If {
     this.coordinator.caching();
   }
 
-  public valueChanged(newValue: boolean, oldValue: boolean, flags: BindingFlags): void {
-    if (flags & BindingFlags.fromFlushChanges) {
+  public valueChanged(newValue: boolean, oldValue: boolean, flags: LifecycleFlags): void {
+    if (flags & LifecycleFlags.fromFlushChanges) {
       const view = this.updateView();
       this.coordinator.compose(view);
     } else {

@@ -6,10 +6,10 @@ import {
   If,
   Else,
   IView,
-  BindingFlags,
-  IAttach,
-  Lifecycle,
   LifecycleFlags,
+  IAttach,
+  AttachLifecycle,
+  AttachLifecycleFlags,
   ForOfStatement,
   BindingIdentifier,
   AccessScope,
@@ -32,7 +32,7 @@ describe('The "if" template controller', () => {
     const { attribute: ifAttr, location, cs } = hydrateCustomAttribute(If);
 
     ifAttr.value = true;
-    ifAttr.$bind(BindingFlags.fromBind, createScope());
+    ifAttr.$bind(LifecycleFlags.fromBind, createScope());
 
     const child = getCurrentView(ifAttr);
     const ifView = ifAttr['ifView'] as IView;
@@ -54,7 +54,7 @@ describe('The "if" template controller', () => {
     const { attribute: ifAttr, location, cs } = hydrateCustomAttribute(If);
 
     ifAttr.value = true;
-    ifAttr.$bind(BindingFlags.fromBind, createScope());
+    ifAttr.$bind(LifecycleFlags.fromBind, createScope());
     runAttachLifecycle(cs, ifAttr);
 
     const childBefore = getCurrentView(ifAttr);
@@ -90,7 +90,7 @@ describe('The "if" template controller', () => {
     elseAttr.link(ifAttr);
 
     ifAttr.value = true;
-    ifAttr.$bind(BindingFlags.fromBind, createScope());
+    ifAttr.$bind(LifecycleFlags.fromBind, createScope());
     ifAttr.value = false;
 
     let child = getCurrentView(ifAttr);
@@ -120,7 +120,7 @@ describe('The "if" template controller', () => {
     const { attribute: ifAttr, cs } = hydrateCustomAttribute(If);
 
     ifAttr.value = true;
-    ifAttr.$bind(BindingFlags.fromBind, createScope());
+    ifAttr.$bind(LifecycleFlags.fromBind, createScope());
 
     const ifView = ifAttr['ifView'] as IView;
 
@@ -135,11 +135,11 @@ describe('The "if" template controller', () => {
     const { attribute: ifAttr } = hydrateCustomAttribute(If);
 
     ifAttr.value = true;
-    ifAttr.$bind(BindingFlags.fromBind, createScope());
+    ifAttr.$bind(LifecycleFlags.fromBind, createScope());
 
     const ifView = ifAttr['ifView'] as IView;
 
-    ifAttr.$unbind(BindingFlags.fromUnbind);
+    ifAttr.$unbind(LifecycleFlags.fromUnbind);
 
     expect(ifView).to.not.have.$state.isBound();
     expect(ifAttr).to.not.have.$state.isBound();
@@ -150,13 +150,13 @@ describe('The "if" template controller', () => {
   }
 
   function runAttachLifecycle(changeSet: IChangeSet, item: IAttach) {
-    const attachLifecycle = Lifecycle.beginAttach(changeSet, null, LifecycleFlags.none);
+    const attachLifecycle = AttachLifecycle.beginAttach(changeSet, null, AttachLifecycleFlags.none);
     attachLifecycle.attach(item);
     attachLifecycle.end();
   }
 
   function runDetachLifecycle(changeSet: IChangeSet, item: IAttach) {
-    const detachLifecycle = Lifecycle.beginDetach(changeSet, LifecycleFlags.none);
+    const detachLifecycle = AttachLifecycle.beginDetach(changeSet, AttachLifecycleFlags.none);
     detachLifecycle.detach(item);
     detachLifecycle.end();
   }
@@ -235,14 +235,14 @@ describe(`If/Else`, () => {
 
       ([item, value, trueValue, falseValue]) => [(ifSut, elseSut, host, cs) => {
         ifSut.value = value;
-        ifSut.$bind(BindingFlags.fromBind, createScopeForTest({ item }));
+        ifSut.$bind(LifecycleFlags.fromBind, createScopeForTest({ item }));
 
         expect(ifSut.coordinator['currentView'].$scope).to.equal(ifSut.$scope);
         expect(ifSut.coordinator['currentView']).to.have.$state.isBound();
 
         expect(host.textContent).to.equal('', `execute1, host.textContent`);
 
-        Lifecycle.beginAttach(cs, host, LifecycleFlags.none).attach(ifSut).end();
+        AttachLifecycle.beginAttach(cs, host, AttachLifecycleFlags.none).attach(ifSut).end();
 
         expect(host.textContent).to.equal(!!ifSut.value ? trueValue : falseValue, `execute1, host.textContent`);
 
@@ -250,14 +250,14 @@ describe(`If/Else`, () => {
 
       ([item, value, trueValue, falseValue]) => [(ifSut, elseSut, host, cs) => {
         ifSut.value = value;
-        ifSut.$bind(BindingFlags.fromBind | BindingFlags.fromFlushChanges, createScopeForTest({ item }));
+        ifSut.$bind(LifecycleFlags.fromBind | LifecycleFlags.fromFlushChanges, createScopeForTest({ item }));
 
         expect(ifSut.coordinator['currentView'].$scope).to.equal(ifSut.$scope);
         expect(ifSut.coordinator['currentView']).to.have.$state.isBound();
 
         expect(host.textContent).to.equal('', `execute1, host.textContent`);
 
-        Lifecycle.beginAttach(cs, host, LifecycleFlags.none).attach(ifSut).end();
+        AttachLifecycle.beginAttach(cs, host, AttachLifecycleFlags.none).attach(ifSut).end();
 
         expect(host.textContent).to.equal(!!ifSut.value ? trueValue : falseValue, `execute1, host.textContent`);
 
@@ -267,7 +267,7 @@ describe(`If/Else`, () => {
     <(($1: [any, boolean, string, string, string]) => [(ifSut: If, elseSut: Else, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([,, trueValue, falseValue]) => [(ifSut: If, elseSut: Else, host: Node) => {
-        ifSut.$bind(BindingFlags.fromBind, ifSut.$scope);
+        ifSut.$bind(LifecycleFlags.fromBind, ifSut.$scope);
 
         expect(ifSut.coordinator['currentView'].$scope).to.equal(ifSut.$scope);
         expect(ifSut.coordinator['currentView']).to.have.$state.isBound();
@@ -277,7 +277,7 @@ describe(`If/Else`, () => {
       }, `$bind(fromBind), same scope`],
 
       ([item,, trueValue, falseValue]) => [(ifSut: If, elseSut: Else, host: Node, cs: LinkedChangeList) => {
-        ifSut.$bind(BindingFlags.fromBind, createScopeForTest({ item }));
+        ifSut.$bind(LifecycleFlags.fromBind, createScopeForTest({ item }));
 
         expect(ifSut.coordinator['currentView'].$scope).to.equal(ifSut.$scope);
         expect(ifSut.coordinator['currentView']).to.have.$state.isBound();
@@ -294,7 +294,7 @@ describe(`If/Else`, () => {
       }, `$bind(fromBind), new scope `],
 
       ([item,, trueValue, falseValue]) => [(ifSut: If, elseSut: Else, host: Node) => {
-        ifSut.$bind(BindingFlags.fromFlushChanges, createScopeForTest({ item }));
+        ifSut.$bind(LifecycleFlags.fromFlushChanges, createScopeForTest({ item }));
 
         expect(ifSut.coordinator['currentView'].$scope).to.equal(ifSut.$scope);
         expect(ifSut.coordinator['currentView']).to.have.$state.isBound();
@@ -366,22 +366,22 @@ describe(`If/Else`, () => {
     <(($1: [any, boolean, string, string, string]) => [(ifSut: If, elseSut: Else, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([,,]) => [(ifSut, elseSut, host, cs) => {
-        Lifecycle.beginDetach(cs, LifecycleFlags.none).detach(ifSut).end();
+        AttachLifecycle.beginDetach(cs, AttachLifecycleFlags.none).detach(ifSut).end();
 
         expect(host.textContent).to.equal('', `execute4, host.textContent`);
 
-        ifSut.$unbind(BindingFlags.fromUnbind);
+        ifSut.$unbind(LifecycleFlags.fromUnbind);
 
         expect(host.textContent).to.equal('', `execute4, host.textContent`);
 
       }, `$detach(none)   -> $unbind(fromUnbind)`],
 
       ([,,]) => [(ifSut, elseSut, host, cs) => {
-        Lifecycle.beginDetach(cs, LifecycleFlags.unbindAfterDetached).detach(ifSut).end();
+        AttachLifecycle.beginDetach(cs, AttachLifecycleFlags.unbindAfterDetached).detach(ifSut).end();
 
         expect(host.textContent).to.equal('', `execute4, host.textContent`);
 
-        ifSut.$unbind(BindingFlags.fromUnbind);
+        ifSut.$unbind(LifecycleFlags.fromUnbind);
 
         expect(host.textContent).to.equal('', `execute4, host.textContent`);
 
@@ -391,7 +391,7 @@ describe(`If/Else`, () => {
     <(($1: [any, boolean, string, string, string]) => [(ifSut: If, elseSut: Else, host: Node, cs: LinkedChangeList) => void, string])[]>[
 
       ([,,]) => [(ifSut, elseSut, host) => {
-        ifSut.$unbind(BindingFlags.fromUnbind);
+        ifSut.$unbind(LifecycleFlags.fromUnbind);
 
         expect(host.textContent).to.equal('', `execute5, host.textContent`);
 

@@ -1,4 +1,4 @@
-import { IExpression, IObserverLocator, Binding, BindingFlags, IScope, BindingMode, ThrottleBindingBehavior, IsBindingBehavior } from '../../src/index';
+import { IExpression, IObserverLocator, Binding, LifecycleFlags, IScope, BindingMode, ThrottleBindingBehavior, IsBindingBehavior } from '../../src/index';
 import { expect } from 'chai';
 import { IContainer } from '../../../kernel/src/index';
 
@@ -11,7 +11,7 @@ describe('ThrottleBindingBehavior', () => {
   let container: IContainer;
   let sut: ThrottleBindingBehavior;
   let binding: Binding;
-  let flags: BindingFlags;
+  let flags: LifecycleFlags;
   let scope: IScope;
   let originalFn: Function;
 

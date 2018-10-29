@@ -1,4 +1,4 @@
-import { DataAttributeAccessor, AttrBindingBehavior ,IExpression , IObserverLocator ,Binding ,BindingFlags,IScope ,BindingMode,DOM, IsBindingBehavior } from '../../src/index';
+import { DataAttributeAccessor, AttrBindingBehavior ,IExpression , IObserverLocator ,Binding ,LifecycleFlags,IScope ,BindingMode,DOM, IsBindingBehavior } from '../../src/index';
 import { expect } from 'chai';
 import { IContainer, DI } from '../../../kernel/src/index';
 
@@ -11,7 +11,7 @@ describe('AttrBindingBehavior', () => {
   let container: IContainer;
   let sut: AttrBindingBehavior;
   let binding: Binding;
-  let flags: BindingFlags;
+  let flags: LifecycleFlags;
   let scope: IScope;
 
   beforeEach(() => {

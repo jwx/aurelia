@@ -1,7 +1,7 @@
 import { DI, Reporter } from '@aurelia/kernel';
 import { INode, INodeSequence, IRenderLocation } from '../dom';
-import { IAttach, IAttachLifecycle, IBindScope, IDetachLifecycle, IMountable, LifecycleState } from '../lifecycle';
-import { BindingFlags, IScope } from '../observation';
+import { IAttach, IAttachLifecycle, IBindScope, IDetachLifecycle, IMountable, LifecycleState, Lifecycle } from '../lifecycle';
+import { LifecycleFlags, IScope } from '../observation';
 import { IRenderable, IRenderContext, ITemplate } from './rendering-engine';
 
 export type RenderCallback = (view: IView) => void;
@@ -82,11 +82,11 @@ export class View implements IView {
       return this.cache.canReturnToCache(this);
     }
 
-    return this.$unmount();
+    return this.$unmount(LifecycleFlags.fromRelease);
   }
 
-  public $bind(flags: BindingFlags, scope: IScope): void {
-    flags |= BindingFlags.fromBind;
+  public $bind(flags: LifecycleFlags, scope: IScope): void {
+    flags |= LifecycleFlags.fromBind;
 
     if (this.$state & LifecycleState.isBound) {
       if (this.$scope === scope) {
@@ -110,12 +110,12 @@ export class View implements IView {
     this.$state &= ~LifecycleState.isBinding;
   }
 
-  public $unbind(flags: BindingFlags): void {
+  public $unbind(flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.isBound) {
       // add isUnbinding flag
       this.$state |= LifecycleState.isUnbinding;
 
-      flags |= BindingFlags.fromUnbind;
+      flags |= LifecycleFlags.fromUnbind;
 
       let current = this.$bindableTail;
       while (current !== null) {
@@ -129,21 +129,26 @@ export class View implements IView {
     }
   }
 
-  public $attach(encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
+  public $attach(encapsulationSource: INode, flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.isAttached) {
       return;
     }
     // add isAttaching flag
     this.$state |= LifecycleState.isAttaching;
+    flags |= LifecycleFlags.fromAttach;
+
+    if (this.$state & LifecycleState.needsMount) {
+      Lifecycle.queueMount(this, flags);
+    }
 
     let current = this.$attachableHead;
     while (current !== null) {
-      current.$attach(encapsulationSource, lifecycle);
+      current.$attach(encapsulationSource, flags);
       current = current.$nextAttach;
     }
 
     if (this.$state & LifecycleState.needsMount) {
-      lifecycle.queueMount(this);
+      Lifecycle.unqueueMount();
     }
 
     // add isAttached flag, remove isAttaching flag
@@ -151,30 +156,33 @@ export class View implements IView {
     this.$state &= ~LifecycleState.isAttaching;
   }
 
-  public $detach(lifecycle: IDetachLifecycle): void {
+  public $detach(flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.isAttached) {
       // add isDetaching flag
       this.$state |= LifecycleState.isDetaching;
+      flags |= LifecycleFlags.fromDetach;
 
-      lifecycle.queueUnmount(this);
+      Lifecycle.queueUnmount(this, flags);
 
       let current = this.$attachableTail;
       while (current !== null) {
-        current.$detach(lifecycle);
+        current.$detach(flags);
         current = current.$prevAttach;
       }
+
+      Lifecycle.unqueueUnmount();
 
       // remove isAttached and isDetaching flags
       this.$state &= ~(LifecycleState.isAttached | LifecycleState.isDetaching);
     }
   }
 
-  public $mount(): void {
+  public $mount(flags: LifecycleFlags): void {
     this.$state &= ~LifecycleState.needsMount;
     this.$nodes.insertBefore(this.location);
   }
 
-  public $unmount(): boolean {
+  public $unmount(flags: LifecycleFlags): boolean {
     this.$state |= LifecycleState.needsMount;
     this.$nodes.remove();
 
@@ -262,12 +270,12 @@ export class ViewFactory implements IViewFactory {
   }
 }
 
-function lockedBind(this: View, flags: BindingFlags): void {
+function lockedBind(this: View, flags: LifecycleFlags): void {
   if (this.$state & LifecycleState.isBound) {
     return;
   }
 
-  flags |= BindingFlags.fromBind;
+  flags |= LifecycleFlags.fromBind;
   const lockedScope = this.$scope;
   let current = this.$bindableHead;
   while (current !== null) {

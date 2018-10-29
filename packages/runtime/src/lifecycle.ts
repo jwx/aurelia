@@ -1,6 +1,6 @@
-import { Omit } from '@aurelia/kernel';
+import { Omit, PLATFORM } from '@aurelia/kernel';
 import { INode } from './dom';
-import { BindingFlags, IChangeSet, IScope } from './observation';
+import { LifecycleFlags, IChangeSet, IScope } from './observation';
 
 export const enum LifecycleState {
   none                  = 0b00000000000,
@@ -14,7 +14,7 @@ export const enum LifecycleState {
   needsMount            = 0b00010000000
 }
 
-export enum LifecycleFlags {
+export enum AttachLifecycleFlags {
   none                = 0b001,
   noTasks             = 0b010,
   unbindAfterDetached = 0b100,
@@ -64,20 +64,20 @@ export interface ILifecycleBinding {
    *
    * @param flags Contextual information about the lifecycle, such as what triggered it.
    * Some uses for this hook:
-   * - `flags & BindingFlags.fromStartTask`: the Aurelia app is starting (this is the initial bind)
-   * - `flags & BindingFlags.fromBind`: this is a normal `$bind` lifecycle
-   * - `flags & BindingFlags.updateTargetInstance`: this `$bind` was triggered by some upstream observer and is not a real `$bind` lifecycle
-   * - `flags & BindingFlags.fromFlushChanges` (only occurs in conjunction with updateTargetInstance): the update was queued to a `LinkedChangeList` which is now being flushed
+   * - `flags & LifecycleFlags.fromStartTask`: the Aurelia app is starting (this is the initial bind)
+   * - `flags & LifecycleFlags.fromBind`: this is a normal `$bind` lifecycle
+   * - `flags & LifecycleFlags.updateTargetInstance`: this `$bind` was triggered by some upstream observer and is not a real `$bind` lifecycle
+   * - `flags & LifecycleFlags.fromFlushChanges` (only occurs in conjunction with updateTargetInstance): the update was queued to a `LinkedChangeList` which is now being flushed
    *
    * @description
    * This is the first "create" lifecycle hook of the hooks that can occur multiple times per instance,
    * and the third lifecycle hook (after `render` and `created`) of the very first lifecycle.
    */
-  binding?(flags: BindingFlags): void;
+  binding?(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleBound {
-  /*@internal*/$boundFlags?: BindingFlags;
+  /*@internal*/$boundFlags?: LifecycleFlags;
   /*@internal*/$nextBound?: ILifecycleBound;
 
   /**
@@ -88,16 +88,16 @@ export interface ILifecycleBound {
    *
    * @param flags Contextual information about the lifecycle, such as what triggered it.
    * Some uses for this hook:
-   * - `flags & BindingFlags.fromStartTask`: the Aurelia app is starting (this is the initial bind)
-   * - `flags & BindingFlags.fromBind`: this is a normal `$bind` lifecycle
-   * - `flags & BindingFlags.updateTargetInstance`: this `$bind` was triggered by some upstream observer and is not a real `$bind` lifecycle
-   * - `flags & BindingFlags.fromFlushChanges` (only occurs in conjunction with updateTargetInstance): the update was queued to a `LinkedChangeList` which is now being flushed
+   * - `flags & LifecycleFlags.fromStartTask`: the Aurelia app is starting (this is the initial bind)
+   * - `flags & LifecycleFlags.fromBind`: this is a normal `$bind` lifecycle
+   * - `flags & LifecycleFlags.updateTargetInstance`: this `$bind` was triggered by some upstream observer and is not a real `$bind` lifecycle
+   * - `flags & LifecycleFlags.fromFlushChanges` (only occurs in conjunction with updateTargetInstance): the update was queued to a `LinkedChangeList` which is now being flushed
    *
    * @description
    * This is the second "create" lifecycle hook (after `binding`) of the hooks that can occur multiple times per instance,
    * and the fourth lifecycle hook (after `render`, `created` and `binding`) of the very first lifecycle.
    */
-  bound?(flags: BindingFlags): void;
+  bound?(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleUnbinding {
@@ -109,9 +109,9 @@ export interface ILifecycleUnbinding {
    *
    * @param flags Contextual information about the lifecycle, such as what triggered it.
    * Some uses for this hook:
-   * - `flags & BindingFlags.fromBind`: the component is just switching scope
-   * - `flags & BindingFlags.fromUnbind`: the component is really disposing
-   * - `flags & BindingFlags.fromStopTask`: the Aurelia app is stopping
+   * - `flags & LifecycleFlags.fromBind`: the component is just switching scope
+   * - `flags & LifecycleFlags.fromUnbind`: the component is really disposing
+   * - `flags & LifecycleFlags.fromStopTask`: the Aurelia app is stopping
    *
    * @description
    * This is the fourth "cleanup" lifecycle hook (after `detaching`, `caching` and `detached`)
@@ -119,11 +119,11 @@ export interface ILifecycleUnbinding {
    * Last opportunity to perform any source or target updates before the bindings are disconnected.
    *
    */
-  unbinding?(flags: BindingFlags): void;
+  unbinding?(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleUnbound {
-  /*@internal*/$unboundFlags?: BindingFlags;
+  /*@internal*/$unboundFlags?: LifecycleFlags;
   /*@internal*/$nextUnbound?: ILifecycleUnbound;
 
   /**
@@ -135,9 +135,9 @@ export interface ILifecycleUnbound {
    *
    * @param flags Contextual information about the lifecycle, such as what triggered it.
    * Some uses for this hook:
-   * - `flags & BindingFlags.fromBind`: the component is just switching scope
-   * - `flags & BindingFlags.fromUnbind`: the component is really disposing
-   * - `flags & BindingFlags.fromStopTask`: the Aurelia app is stopping
+   * - `flags & LifecycleFlags.fromBind`: the component is just switching scope
+   * - `flags & LifecycleFlags.fromUnbind`: the component is really disposing
+   * - `flags & LifecycleFlags.fromStopTask`: the Aurelia app is stopping
    *
    * @description
    * This is the fifth (and last) "cleanup" lifecycle hook (after `detaching`, `caching`, `detached`
@@ -145,7 +145,7 @@ export interface ILifecycleUnbound {
    *
    * The lifecycle either ends here, or starts at `$bind` again.
    */
-  unbound?(flags: BindingFlags): void;
+  unbound?(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleAttaching {
@@ -164,10 +164,11 @@ export interface ILifecycleAttaching {
    * This is the time to add any (sync or async) tasks (e.g. animations) to the lifecycle that need to happen before
    * the nodes are added to the DOM.
    */
-  attaching?(encapsulationSource: INode, lifecycle: IAttachLifecycle): void;
+  attaching?(encapsulationSource: INode, flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleAttached {
+  /*@internal*/$attachedFlags?: LifecycleFlags;
   /*@internal*/$nextAttached?: ILifecycleAttached;
 
   /**
@@ -183,7 +184,7 @@ export interface ILifecycleAttached {
    * This instance and its children (if any) can be assumed
    * to be fully initialized, bound, rendered, added to the DOM and ready for use.
    */
-  attached?(): void;
+  attached?(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleDetaching {
@@ -200,10 +201,11 @@ export interface ILifecycleDetaching {
    * This is the time to add any (sync or async) tasks (e.g. animations) to the lifecycle that need to happen before
    * the nodes are removed from the DOM.
    */
-  detaching?(lifecycle: IDetachLifecycle): void;
+  detaching?(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleDetached {
+  /*@internal*/$detachedFlags?: LifecycleFlags;
   /*@internal*/$nextDetached?: ILifecycleDetached;
 
   /**
@@ -218,7 +220,7 @@ export interface ILifecycleDetached {
    *
    * If no `$unbind` lifecycle is queued, this is the last opportunity to make state changes before the lifecycle ends.
    */
-  detached?(): void;
+  detached?(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleCaching {
@@ -235,6 +237,13 @@ export interface ILifecycleCaching {
    * on the resource description.
    */
   caching?(): void;
+}
+
+export interface ILifecycleFlushChanges {
+  /*@internal*/$flushChangesFlags?: LifecycleFlags;
+  /*@internal*/$nextFlushChanges?: ILifecycleFlushChanges;
+
+  flushChanges(flags: LifecycleFlags): void;
 }
 
 /**
@@ -263,11 +272,11 @@ export interface ILifecycleCache {
 export interface ICachable extends ILifecycleCache, ILifecycleState { }
 
 export interface ILifecycleAttach {
-  $attach(encapsulationSource: INode, lifecycle: IAttachLifecycle): void;
+  $attach(encapsulationSource: INode, flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleDetach {
-  $detach(lifecycle: IDetachLifecycle): void;
+  $detach(flags: LifecycleFlags): void;
 }
 
 export interface IAttach extends ILifecycleAttach, ILifecycleDetach, ICachable {
@@ -276,15 +285,17 @@ export interface IAttach extends ILifecycleAttach, ILifecycleDetach, ICachable {
 }
 
 export interface ILifecycleMount {
+  /*@internal*/$mountFlags?: LifecycleFlags;
   /*@internal*/$nextMount?: ILifecycleMount;
 
   /**
    * Add the `$nodes` of this instance to the Host or RenderLocation that this instance is holding.
    */
-  $mount(): void;
+  $mount(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleUnmount {
+  /*@internal*/$unmountFlags?: LifecycleFlags;
   /*@internal*/$nextUnmount?: ILifecycleUnmount;
 
   /**
@@ -294,24 +305,24 @@ export interface ILifecycleUnmount {
    * - `false` if the cache (typically ViewFactory) did not allow the instance to be cached.
    * - `undefined` (void) if the instance does not support caching. Functionally equivalent to `false`
    */
-  $unmount(): boolean | void;
+  $unmount(flags: LifecycleFlags): boolean | void;
 }
 export interface IMountable extends ILifecycleMount, ILifecycleUnmount, ILifecycleState { }
 
 export interface ILifecycleUnbind {
-  $unbind(flags: BindingFlags): void;
+  $unbind(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleBind {
-  $bind(flags: BindingFlags, scope?: IScope): void;
+  $bind(flags: LifecycleFlags, scope?: IScope): void;
 }
 
 export interface ILifecycleBindSelf {
-  $bind(flags: BindingFlags): void;
+  $bind(flags: LifecycleFlags): void;
 }
 
 export interface ILifecycleBindScope {
-  $bind(flags: BindingFlags, scope: IScope): void;
+  $bind(flags: LifecycleFlags, scope: IScope): void;
 }
 
 export interface IBind extends ILifecycleBind, ILifecycleUnbind, ILifecycleState {
@@ -336,7 +347,7 @@ export interface IAttachLifecycleController {
 }
 
 export interface IAttachLifecycle {
-  readonly flags: LifecycleFlags;
+  readonly flags: AttachLifecycleFlags;
   registerTask(task: ILifecycleTask): void;
   createChild(): IAttachLifecycle;
   queueMount(requestor: ILifecycleMount): void;
@@ -349,334 +360,334 @@ export interface IDetachLifecycleController {
 }
 
 export interface IDetachLifecycle {
-  readonly flags: LifecycleFlags;
+  readonly flags: AttachLifecycleFlags;
   registerTask(task: ILifecycleTask): void;
   createChild(): IDetachLifecycle;
   queueUnmount(requestor: ILifecycleUnmount): void;
   queueDetachedCallback(requestor: ILifecycleDetached): void;
 }
 
-export class AggregateLifecycleTask implements ILifecycleTask {
-  public done: boolean = true;
+// export class AggregateLifecycleTask implements ILifecycleTask {
+//   public done: boolean = true;
 
-  /*@internal*/
-  public owner: AttachLifecycleController | DetachLifecycleController = null;
+//   /*@internal*/
+//   public owner: AttachLifecycleController | DetachLifecycleController = null;
 
-  private tasks: ILifecycleTask[] = [];
-  private waiter: Promise<void> = null;
-  private resolve: () => void = null;
+//   private tasks: ILifecycleTask[] = [];
+//   private waiter: Promise<void> = null;
+//   private resolve: () => void = null;
 
-  public addTask(task: ILifecycleTask): void {
-    if (!task.done) {
-      this.done = false;
-      this.tasks.push(task);
-      task.wait().then(() => this.tryComplete());
-    }
-  }
+//   public addTask(task: ILifecycleTask): void {
+//     if (!task.done) {
+//       this.done = false;
+//       this.tasks.push(task);
+//       task.wait().then(() => this.tryComplete());
+//     }
+//   }
 
-  public canCancel(): boolean {
-    if (this.done) {
-      return false;
-    }
+//   public canCancel(): boolean {
+//     if (this.done) {
+//       return false;
+//     }
 
-    return this.tasks.every(x => x.canCancel());
-  }
+//     return this.tasks.every(x => x.canCancel());
+//   }
 
-  public cancel(): void {
-    if (this.canCancel()) {
-      this.tasks.forEach(x => x.cancel());
-      this.done = false;
-    }
-  }
+//   public cancel(): void {
+//     if (this.canCancel()) {
+//       this.tasks.forEach(x => x.cancel());
+//       this.done = false;
+//     }
+//   }
 
-  public wait(): Promise<void> {
-    if (this.waiter === null) {
-      if (this.done) {
-        this.waiter = Promise.resolve();
-      } else {
-        // tslint:disable-next-line:promise-must-complete
-        this.waiter = new Promise((resolve) => this.resolve = resolve);
-      }
-    }
+//   public wait(): Promise<void> {
+//     if (this.waiter === null) {
+//       if (this.done) {
+//         this.waiter = Promise.resolve();
+//       } else {
+//         // tslint:disable-next-line:promise-must-complete
+//         this.waiter = new Promise((resolve) => this.resolve = resolve);
+//       }
+//     }
 
-    return this.waiter;
-  }
+//     return this.waiter;
+//   }
 
-  private tryComplete(): void {
-    if (this.done) {
-      return;
-    }
+//   private tryComplete(): void {
+//     if (this.done) {
+//       return;
+//     }
 
-    if (this.tasks.every(x => x.done)) {
-      this.complete(true);
-    }
-  }
+//     if (this.tasks.every(x => x.done)) {
+//       this.complete(true);
+//     }
+//   }
 
-  private complete(notCancelled: boolean): void {
-    this.done = true;
+//   private complete(notCancelled: boolean): void {
+//     this.done = true;
 
-    if (notCancelled && this.owner !== null) {
-      this.owner.processAll();
-    }
+//     if (notCancelled && this.owner !== null) {
+//       this.owner.processAll();
+//     }
 
-    if (this.resolve !== null) {
-      this.resolve();
-    }
-  }
-}
+//     if (this.resolve !== null) {
+//       this.resolve();
+//     }
+//   }
+// }
 
-/*@internal*/
-export class AttachLifecycleController implements IAttachLifecycle, IAttachLifecycleController {
-  /*@internal*/
-  public $nextMount: ILifecycleMount = null;
-  /*@internal*/
-  public $nextAttached: ILifecycleAttached = null;
+// /*@internal*/
+// export class AttachLifecycleController implements IAttachLifecycle, IAttachLifecycleController {
+//   /*@internal*/
+//   public $nextMount: ILifecycleMount = null;
+//   /*@internal*/
+//   public $nextAttached: ILifecycleAttached = null;
 
-  private attachedHead: ILifecycleAttached = this;
-  private attachedTail: ILifecycleAttached = this;
-  private mountHead: ILifecycleMount = this;
-  private mountTail: ILifecycleMount = this;
-  private task: AggregateLifecycleTask = null;
+//   private attachedHead: ILifecycleAttached = this;
+//   private attachedTail: ILifecycleAttached = this;
+//   private mountHead: ILifecycleMount = this;
+//   private mountTail: ILifecycleMount = this;
+//   private task: AggregateLifecycleTask = null;
 
-  constructor(
-    public readonly changeSet: IChangeSet,
-    public readonly flags: LifecycleFlags,
-    private parent: AttachLifecycleController = null,
-    private encapsulationSource: INode = null
-  ) { }
+//   constructor(
+//     public readonly changeSet: IChangeSet,
+//     public readonly flags: AttachLifecycleFlags,
+//     private parent: AttachLifecycleController = null,
+//     private encapsulationSource: INode = null
+//   ) { }
 
-  public attach(requestor: IAttach): IAttachLifecycleController {
-    requestor.$attach(this.encapsulationSource, this);
-    return this;
-  }
+//   public attach(requestor: IAttach): IAttachLifecycleController {
+//     requestor.$attach(this.encapsulationSource, this);
+//     return this;
+//   }
 
-  public queueMount(requestor: ILifecycleMount): void {
-    this.mountTail.$nextMount = requestor;
-    this.mountTail = requestor;
-  }
+//   public queueMount(requestor: ILifecycleMount): void {
+//     this.mountTail.$nextMount = requestor;
+//     this.mountTail = requestor;
+//   }
 
-  public queueAttachedCallback(requestor: ILifecycleAttached): void {
-    this.attachedTail.$nextAttached = requestor;
-    this.attachedTail = requestor;
-  }
+//   public queueAttachedCallback(requestor: ILifecycleAttached): void {
+//     this.attachedTail.$nextAttached = requestor;
+//     this.attachedTail = requestor;
+//   }
 
-  public registerTask(task: ILifecycleTask): void {
-    if (this.parent !== null) {
-      this.parent.registerTask(task);
-    } else {
-      if (this.task === null) {
-        this.task = new AggregateLifecycleTask();
-      }
-      this.task.addTask(task);
-    }
-  }
+//   public registerTask(task: ILifecycleTask): void {
+//     if (this.parent !== null) {
+//       this.parent.registerTask(task);
+//     } else {
+//       if (this.task === null) {
+//         this.task = new AggregateLifecycleTask();
+//       }
+//       this.task.addTask(task);
+//     }
+//   }
 
-  public createChild(): IAttachLifecycle {
-    const lifecycle = new AttachLifecycleController(this.changeSet, this.flags, this);
-    this.queueMount(lifecycle);
-    this.queueAttachedCallback(lifecycle);
-    return lifecycle;
-  }
+//   public createChild(): IAttachLifecycle {
+//     const lifecycle = new AttachLifecycleController(this.changeSet, this.flags, this);
+//     this.queueMount(flags);
+//     this.queueAttachedCallback(flags);
+//     return lifecycle;
+//   }
 
-  public end(): ILifecycleTask {
-    if (this.task !== null && !this.task.done) {
-      this.task.owner = this;
-      return this.task;
-    }
+//   public end(): ILifecycleTask {
+//     if (this.task !== null && !this.task.done) {
+//       this.task.owner = this;
+//       return this.task;
+//     }
 
-    this.processAll();
+//     this.processAll();
 
-    return Lifecycle.done;
-  }
+//     return AttachLifecycle.done;
+//   }
 
-  /*@internal*/
-  public processAll(): void {
-    this.changeSet.flushChanges();
-    this.processMounts();
-    this.processAttachedCallbacks();
-  }
+//   /*@internal*/
+//   public processAll(): void {
+//     this.changeSet.flushChanges();
+//     this.processMounts();
+//     this.processAttachedCallbacks();
+//   }
 
-  /*@internal*/
-  public $mount(): void {
-    if (this.parent !== null) {
-      this.processMounts();
-    }
-  }
+//   /*@internal*/
+//   public $mount(): void {
+//     if (this.parent !== null) {
+//       this.processMounts();
+//     }
+//   }
 
-  /*@internal*/
-  public attached(): void {
-    if (this.parent !== null) {
-      this.processAttachedCallbacks();
-    }
-  }
+//   /*@internal*/
+//   public attached(): void {
+//     if (this.parent !== null) {
+//       this.processAttachedCallbacks();
+//     }
+//   }
 
-  private processMounts(): void {
-    let currentMount = this.mountHead;
-    let nextMount: typeof currentMount;
+//   private processMounts(): void {
+//     let currentMount = this.mountHead;
+//     let nextMount: typeof currentMount;
 
-    while (currentMount) {
-      currentMount.$mount();
-      nextMount = currentMount.$nextMount;
-      currentMount.$nextMount = null;
-      currentMount = nextMount;
-    }
-  }
+//     while (currentMount) {
+//       currentMount.$mount(0);
+//       nextMount = currentMount.$nextMount;
+//       currentMount.$nextMount = null;
+//       currentMount = nextMount;
+//     }
+//   }
 
-  private processAttachedCallbacks(): void {
-    let currentAttached = this.attachedHead;
-    let nextAttached: typeof currentAttached;
+//   private processAttachedCallbacks(): void {
+//     let currentAttached = this.attachedHead;
+//     let nextAttached: typeof currentAttached;
 
-    while (currentAttached) {
-      currentAttached.attached();
-      nextAttached = currentAttached.$nextAttached;
-      currentAttached.$nextAttached = null;
-      currentAttached = nextAttached;
-    }
-  }
-}
+//     while (currentAttached) {
+//       currentAttached.attached(0);
+//       nextAttached = currentAttached.$nextAttached;
+//       currentAttached.$nextAttached = null;
+//       currentAttached = nextAttached;
+//     }
+//   }
+// }
 
-/*@internal*/
-export class DetachLifecycleController implements IDetachLifecycle, IDetachLifecycleController {
-  /*@internal*/
-  public $nextUnmount: ILifecycleUnmount = null;
-  /*@internal*/
-  public $nextDetached: ILifecycleDetached = null;
+// /*@internal*/
+// export class DetachLifecycleController implements IDetachLifecycle, IDetachLifecycleController {
+//   /*@internal*/
+//   public $nextUnmount: ILifecycleUnmount = null;
+//   /*@internal*/
+//   public $nextDetached: ILifecycleDetached = null;
 
-  private detachedHead: ILifecycleDetached = this; //LOL
-  private detachedTail: ILifecycleDetached = this;
-  private unmountHead: ILifecycleUnmount = this;
-  private unmountTail: ILifecycleUnmount = this;
-  private task: AggregateLifecycleTask = null;
-  private allowUnmount: boolean = true;
+//   private detachedHead: ILifecycleDetached = this; //LOL
+//   private detachedTail: ILifecycleDetached = this;
+//   private unmountHead: ILifecycleUnmount = this;
+//   private unmountTail: ILifecycleUnmount = this;
+//   private task: AggregateLifecycleTask = null;
+//   private allowUnmount: boolean = true;
 
-  constructor(
-    public readonly changeSet: IChangeSet,
-    public readonly flags: LifecycleFlags,
-    private parent: DetachLifecycleController = null
-  ) { }
+//   constructor(
+//     public readonly changeSet: IChangeSet,
+//     public readonly flags: AttachLifecycleFlags,
+//     private parent: DetachLifecycleController = null
+//   ) { }
 
-  public detach(requestor: IAttach): IDetachLifecycleController {
-    this.allowUnmount = true;
+//   public detach(requestor: IAttach): IDetachLifecycleController {
+//     this.allowUnmount = true;
 
-    if (requestor.$state & LifecycleState.isAttached) {
-      requestor.$detach(this);
-    } else if (isUnmountable(requestor)) {
-      this.queueUnmount(requestor);
-    }
+//     if (requestor.$state & LifecycleState.isAttached) {
+//       requestor.$detach(this);
+//     } else if (isUnmountable(requestor)) {
+//       this.queueUnmount(requestor);
+//     }
 
-    return this;
-  }
+//     return this;
+//   }
 
-  public queueUnmount(requestor: ILifecycleUnmount): void {
-    if (this.allowUnmount) {
-      this.unmountTail.$nextUnmount = requestor;
-      this.unmountTail = requestor;
-      this.allowUnmount = false; // only remove roots
-    }
-  }
+//   public queueUnmount(requestor: ILifecycleUnmount): void {
+//     if (this.allowUnmount) {
+//       this.unmountTail.$nextUnmount = requestor;
+//       this.unmountTail = requestor;
+//       this.allowUnmount = false; // only remove roots
+//     }
+//   }
 
-  public queueDetachedCallback(requestor: ILifecycleDetached): void {
-    this.detachedTail.$nextDetached = requestor;
-    this.detachedTail = requestor;
-  }
+//   public queueDetachedCallback(requestor: ILifecycleDetached): void {
+//     this.detachedTail.$nextDetached = requestor;
+//     this.detachedTail = requestor;
+//   }
 
-  public registerTask(task: ILifecycleTask): void {
-    if (this.parent !== null) {
-      this.parent.registerTask(task);
-    } else {
-      if (this.task === null) {
-        this.task = new AggregateLifecycleTask();
-      }
-      this.task.addTask(task);
-    }
-  }
+//   public registerTask(task: ILifecycleTask): void {
+//     if (this.parent !== null) {
+//       this.parent.registerTask(task);
+//     } else {
+//       if (this.task === null) {
+//         this.task = new AggregateLifecycleTask();
+//       }
+//       this.task.addTask(task);
+//     }
+//   }
 
-  public createChild(): IDetachLifecycle {
-    const lifecycle = new DetachLifecycleController(this.changeSet, this.flags, this);
-    this.queueUnmount(lifecycle);
-    this.queueDetachedCallback(lifecycle);
-    return lifecycle;
-  }
+//   public createChild(): IDetachLifecycle {
+//     const lifecycle = new DetachLifecycleController(this.changeSet, this.flags, this);
+//     this.queueUnmount(flags);
+//     this.queueDetachedCallback(flags);
+//     return lifecycle;
+//   }
 
-  public end(): ILifecycleTask {
-    if (this.task !== null && !this.task.done) {
-      this.task.owner = this;
-      return this.task;
-    }
+//   public end(): ILifecycleTask {
+//     if (this.task !== null && !this.task.done) {
+//       this.task.owner = this;
+//       return this.task;
+//     }
 
-    this.processAll();
+//     this.processAll();
 
-    return Lifecycle.done;
-  }
+//     return AttachLifecycle.done;
+//   }
 
-  /*@internal*/
-  public $unmount(): void {
-    if (this.parent !== null) {
-      this.processUnmounts();
-    }
-  }
+//   /*@internal*/
+//   public $unmount(): void {
+//     if (this.parent !== null) {
+//       this.processUnmounts();
+//     }
+//   }
 
-  /*@internal*/
-  public detached(): void {
-    if (this.parent !== null) {
-      this.processDetachedCallbacks();
-    }
-  }
+//   /*@internal*/
+//   public detached(): void {
+//     if (this.parent !== null) {
+//       this.processDetachedCallbacks();
+//     }
+//   }
 
-  /*@internal*/
-  public processAll(): void {
-    this.changeSet.flushChanges();
-    this.processUnmounts();
-    this.processDetachedCallbacks();
-  }
+//   /*@internal*/
+//   public processAll(): void {
+//     this.changeSet.flushChanges();
+//     this.processUnmounts();
+//     this.processDetachedCallbacks();
+//   }
 
-  private processUnmounts(): void {
-    let currentUnmount = this.unmountHead;
+//   private processUnmounts(): void {
+//     let currentUnmount = this.unmountHead;
 
-    if (this.flags & LifecycleFlags.unbindAfterDetached) {
-      while (currentUnmount) {
-        currentUnmount.$unmount();
-        currentUnmount = currentUnmount.$nextUnmount;
-      }
-    } else {
-      let nextUnmount: typeof currentUnmount;
+//     if (this.flags & AttachLifecycleFlags.unbindAfterDetached) {
+//       while (currentUnmount) {
+//         currentUnmount.$unmount(0);
+//         currentUnmount = currentUnmount.$nextUnmount;
+//       }
+//     } else {
+//       let nextUnmount: typeof currentUnmount;
 
-      while (currentUnmount) {
-        currentUnmount.$unmount();
-        nextUnmount = currentUnmount.$nextUnmount;
-        currentUnmount.$nextUnmount = null;
-        currentUnmount = nextUnmount;
-      }
-    }
-  }
+//       while (currentUnmount) {
+//         currentUnmount.$unmount(0);
+//         nextUnmount = currentUnmount.$nextUnmount;
+//         currentUnmount.$nextUnmount = null;
+//         currentUnmount = nextUnmount;
+//       }
+//     }
+//   }
 
-  private processDetachedCallbacks(): void {
-    let currentDetached = this.detachedHead;
-    let nextDetached: typeof currentDetached;
+//   private processDetachedCallbacks(): void {
+//     let currentDetached = this.detachedHead;
+//     let nextDetached: typeof currentDetached;
 
-    while (currentDetached) {
-      currentDetached.detached();
-      nextDetached = currentDetached.$nextDetached;
-      currentDetached.$nextDetached = null;
-      currentDetached = nextDetached;
-    }
+//     while (currentDetached) {
+//       currentDetached.detached(0);
+//       nextDetached = currentDetached.$nextDetached;
+//       currentDetached.$nextDetached = null;
+//       currentDetached = nextDetached;
+//     }
 
-    if (this.flags & LifecycleFlags.unbindAfterDetached) {
-      let currentUnmount = this.unmountHead;
-      let nextUnmount: typeof currentUnmount;
+//     if (this.flags & AttachLifecycleFlags.unbindAfterDetached) {
+//       let currentUnmount = this.unmountHead;
+//       let nextUnmount: typeof currentUnmount;
 
-      while (currentUnmount) {
-        if (isUnbindable(currentUnmount)) {
-          currentUnmount.$unbind(BindingFlags.fromUnbind);
-        }
+//       while (currentUnmount) {
+//         if (isUnbindable(currentUnmount)) {
+//           currentUnmount.$unbind(LifecycleFlags.fromUnbind);
+//         }
 
-        nextUnmount = currentUnmount.$nextUnmount;
-        currentUnmount.$nextUnmount = null;
-        currentUnmount = nextUnmount;
-      }
-    }
-  }
-}
+//         nextUnmount = currentUnmount.$nextUnmount;
+//         currentUnmount.$nextUnmount = null;
+//         currentUnmount = nextUnmount;
+//       }
+//     }
+//   }
+// }
 
 function isUnmountable(requestor: object): requestor is ILifecycleUnmount {
   return '$unmount' in requestor;
@@ -686,79 +697,277 @@ function isUnbindable(requestor: object): requestor is ILifecycleUnbind {
   return '$unbind' in requestor;
 }
 
+// export const AttachLifecycle = {
+//   beginAttach(changeSet: IChangeSet, encapsulationSource: INode, flags: AttachLifecycleFlags): IAttachLifecycleController {
+//     return new AttachLifecycleController(changeSet, flags, null, encapsulationSource);
+//   },
+
+//   beginDetach(changeSet: IChangeSet, flags: AttachLifecycleFlags): IDetachLifecycleController {
+//     return new DetachLifecycleController(changeSet, flags);
+//   },
+
+//   done: {
+//     done: true,
+//     canCancel(): boolean { return false; },
+//     // tslint:disable-next-line:no-empty
+//     cancel(): void {},
+//     wait(): Promise<void> { return Promise.resolve(); }
+//   }
+// };
+
+const marker = PLATFORM.emptyObject as any;
+
 export const Lifecycle = {
-  beginAttach(changeSet: IChangeSet, encapsulationSource: INode, flags: LifecycleFlags): IAttachLifecycleController {
-    return new AttachLifecycleController(changeSet, flags, null, encapsulationSource);
+  flushing: <boolean>false,
+  flushChangesDepth: 0,
+  flushChangesHead: <ILifecycleFlushChanges>null,
+  flushChangesTail: <ILifecycleFlushChanges>null,
+  queueFlushChanges(requestor: ILifecycleFlushChanges, flags: LifecycleFlags): void {
+    if (requestor.$nextFlushChanges) {
+      return;
+    }
+    requestor.$flushChangesFlags = flags;
+    requestor.$nextFlushChanges = marker;
+    if (Lifecycle.flushChangesHead === null) {
+      Lifecycle.flushChangesHead = requestor;
+    } else {
+      Lifecycle.flushChangesTail.$nextFlushChanges = requestor;
+    }
+    Lifecycle.flushChangesTail = requestor;
+    ++Lifecycle.flushChangesDepth;
+  },
+  unqueueFlushChangesCallbacks(): void {
+    if (--Lifecycle.flushChangesDepth === 0) {
+      if (Lifecycle.flushing) {
+        return;
+      }
+      while (Lifecycle.flushChangesHead !== null) {
+        let current = Lifecycle.flushChangesHead;
+        let next: ILifecycleFlushChanges;
+        Lifecycle.flushChangesHead = Lifecycle.flushChangesTail = null;
+        while (current && current !== marker) {
+          current.flushChanges(current.$flushChangesFlags);
+          next = current.$nextFlushChanges;
+          current.$nextFlushChanges = null;
+          current = next;
+        }
+      }
+      if (Lifecycle.boundDepth === 0) {
+        Lifecycle.invokeBoundCallbacks();
+      }
+    }
   },
 
-  beginDetach(changeSet: IChangeSet, flags: LifecycleFlags): IDetachLifecycleController {
-    return new DetachLifecycleController(changeSet, flags);
-  },
-
-  done: {
-    done: true,
-    canCancel(): boolean { return false; },
-    // tslint:disable-next-line:no-empty
-    cancel(): void {},
-    wait(): Promise<void> { return Promise.resolve(); }
-  }
-};
-
-export const BindLifecycle = {
   boundDepth: 0,
   boundHead: <ILifecycleBound>null,
   boundTail: <ILifecycleBound>null,
-  queueBound(requestor: ILifecycleBound, flags: BindingFlags): void {
-    requestor.$boundFlags = flags;
-    requestor.$nextBound = null;
-    if (BindLifecycle.boundHead === null) {
-      BindLifecycle.boundHead = requestor;
-    } else {
-      BindLifecycle.boundTail.$nextBound = requestor;
+  queueBound(requestor: ILifecycleBound, flags: LifecycleFlags): void {
+    if (requestor.$nextBound) {
+      return;
     }
-    BindLifecycle.boundTail = requestor;
-    ++BindLifecycle.boundDepth;
+    requestor.$boundFlags = flags;
+    requestor.$nextBound = marker;
+    if (Lifecycle.boundHead === null) {
+      Lifecycle.boundHead = requestor;
+    } else {
+      Lifecycle.boundTail.$nextBound = requestor;
+    }
+    Lifecycle.boundTail = requestor;
+    ++Lifecycle.boundDepth;
   },
   unqueueBound(): void {
-    if (--BindLifecycle.boundDepth === 0) {
-      let current = BindLifecycle.boundHead;
-      let next: ILifecycleBound;
-      BindLifecycle.boundHead = BindLifecycle.boundTail = null;
-      while (current !== null) {
-        current.bound(current.$boundFlags);
-        next = current.$nextBound;
-        // Note: we're intentionally not resetting $boundFlags because it's not an object reference
-        // so it can't cause memory leaks. Save some cycles. It's somewhat unclean, but it's fine really.
-        current.$nextBound = null;
+    if (--Lifecycle.boundDepth === 0) {
+      if (Lifecycle.flushChangesDepth > 0) {
+        return;
+      }
+      Lifecycle.invokeBoundCallbacks();
+    }
+  },
+  invokeBoundCallbacks(): void {
+    let current = Lifecycle.boundHead;
+    let next: ILifecycleBound;
+    Lifecycle.boundHead = Lifecycle.boundTail = null;
+    while (current && current !== marker) {
+      current.bound(current.$boundFlags);
+      next = current.$nextBound;
+      current.$nextBound = null;
+      current = next;
+    }
+    if (Lifecycle.attachedDepth === 0) {
+      Lifecycle.invokeAttachedCallbacks();
+    }
+  },
+
+  mountDepth: 0,
+  mountHead: <ILifecycleMount>null,
+  mountTail: <ILifecycleMount>null,
+  queueMount(requestor: ILifecycleMount, flags: LifecycleFlags): void {
+    if (requestor.$nextMount) {
+      return;
+    }
+    requestor.$mountFlags = flags;
+    requestor.$nextMount = marker;
+    if (Lifecycle.mountHead === null) {
+      Lifecycle.mountHead = requestor;
+    } else {
+      Lifecycle.mountTail.$nextMount = requestor;
+    }
+    Lifecycle.mountTail = requestor;
+    ++Lifecycle.mountDepth;
+  },
+  unqueueMount(): void {
+    if (--Lifecycle.mountDepth === 0) {
+      if (Lifecycle.boundDepth > 0 || Lifecycle.flushChangesDepth > 0) {
+        return;
+      }
+      if (Lifecycle.flushChangesDepth > 0) {
+        Lifecycle.unqueueFlushChangesCallbacks();
+      }
+      Lifecycle.invokeMountCallbacks();
+    }
+  },
+  invokeMountCallbacks(): void {
+    let current = Lifecycle.mountHead;
+    let next: ILifecycleMount;
+    Lifecycle.mountHead = Lifecycle.mountTail = null;
+    while (current && current !== marker) {
+      current.$mount(current.$mountFlags);
+      next = current.$nextMount;
+      current.$nextMount = null;
+      current = next;
+    }
+    if (Lifecycle.attachedDepth === 0) {
+      Lifecycle.invokeAttachedCallbacks();
+    }
+  },
+
+  attachedDepth: 0,
+  attachedHead: <ILifecycleAttached>null,
+  attachedTail: <ILifecycleAttached>null,
+  queueAttached(requestor: ILifecycleAttached, flags: LifecycleFlags): void {
+    if (requestor.$nextAttached) {
+      return;
+    }
+    requestor.$attachedFlags = flags;
+    requestor.$nextAttached = marker;
+    if (Lifecycle.attachedHead === null) {
+      Lifecycle.attachedHead = requestor;
+    } else {
+      Lifecycle.attachedTail.$nextAttached = requestor;
+    }
+    Lifecycle.attachedTail = requestor;
+    ++Lifecycle.attachedDepth;
+  },
+  unqueueAttached(): void {
+    if (--Lifecycle.attachedDepth === 0) {
+      if (Lifecycle.mountDepth > 0 || Lifecycle.boundDepth > 0 || Lifecycle.flushChangesDepth > 0) {
+        return;
+      }
+      Lifecycle.invokeAttachedCallbacks();
+    }
+  },
+  invokeAttachedCallbacks(): void {
+    let current = Lifecycle.attachedHead;
+    let next: ILifecycleAttached;
+    Lifecycle.attachedHead = Lifecycle.attachedTail = null;
+    while (current && current !== marker) {
+      current.attached(current.$attachedFlags);
+      next = current.$nextAttached;
+      current.$nextAttached = null;
+      current = next;
+    }
+  },
+
+  unmountDepth: 0,
+  unmountHead: <ILifecycleUnmount>null,
+  unmountTail: <ILifecycleUnmount>null,
+  queueUnmount(requestor: ILifecycleUnmount, flags: LifecycleFlags): void {
+    if (requestor.$nextUnmount) {
+      return;
+    }
+    requestor.$unmountFlags = flags;
+    requestor.$nextUnmount = marker;
+    if (Lifecycle.unmountHead === null) {
+      Lifecycle.unmountHead = requestor;
+    } else {
+      Lifecycle.unmountTail.$nextUnmount = requestor;
+    }
+    Lifecycle.unmountTail = requestor;
+    ++Lifecycle.unmountDepth;
+  },
+  unqueueUnmount(): void {
+    if (--Lifecycle.unmountDepth === 0) {
+      let current = Lifecycle.unmountHead;
+      let next: ILifecycleUnmount;
+      Lifecycle.unmountHead = Lifecycle.unmountTail = null;
+      while (current && current !== marker) {
+        current.$unmount(current.$unmountFlags);
+        next = current.$nextUnmount;
+        current.$nextUnmount = null;
         current = next;
       }
     }
   },
+
+  detachedDepth: 0,
+  detachedHead: <ILifecycleDetached>null,
+  detachedTail: <ILifecycleDetached>null,
+  queueDetached(requestor: ILifecycleDetached, flags: LifecycleFlags): void {
+    if (requestor.$nextDetached) {
+      return;
+    }
+    requestor.$detachedFlags = flags;
+    requestor.$nextDetached = marker;
+    if (Lifecycle.detachedHead === null) {
+      Lifecycle.detachedHead = requestor;
+    } else {
+      Lifecycle.detachedTail.$nextDetached = requestor;
+    }
+    Lifecycle.detachedTail = requestor;
+    ++Lifecycle.detachedDepth;
+  },
+  unqueueDetached(): void {
+    if (--Lifecycle.detachedDepth === 0) {
+      let current = Lifecycle.detachedHead;
+      let next: ILifecycleDetached;
+      Lifecycle.detachedHead = Lifecycle.detachedTail = null;
+      while (current && current !== marker) {
+        current.detached(current.$detachedFlags);
+        next = current.$nextDetached;
+        current.$nextDetached = null;
+        current = next;
+      }
+    }
+  },
+
   unboundDepth: 0,
   unboundHead: <ILifecycleUnbound>null,
   unboundTail: <ILifecycleUnbound>null,
-  queueUnbound(requestor: ILifecycleUnbound, flags: BindingFlags): void {
-    requestor.$unboundFlags = flags;
-    requestor.$nextUnbound = null;
-    if (BindLifecycle.unboundHead === null) {
-      BindLifecycle.unboundHead = requestor;
-    } else {
-      BindLifecycle.unboundTail.$nextUnbound = requestor;
+  queueUnbound(requestor: ILifecycleUnbound, flags: LifecycleFlags): void {
+    if (requestor.$nextUnbound) {
+      return;
     }
-    BindLifecycle.unboundTail = requestor;
-    ++BindLifecycle.unboundDepth;
+    requestor.$unboundFlags = flags;
+    requestor.$nextUnbound = marker;
+    if (Lifecycle.unboundHead === null) {
+      Lifecycle.unboundHead = requestor;
+    } else {
+      Lifecycle.unboundTail.$nextUnbound = requestor;
+    }
+    Lifecycle.unboundTail = requestor;
+    ++Lifecycle.unboundDepth;
   },
   unqueueUnbound(): void {
-    if (--BindLifecycle.unboundDepth === 0) {
-      let current = BindLifecycle.unboundHead;
+    if (--Lifecycle.unboundDepth === 0) {
+      let current = Lifecycle.unboundHead;
       let next: ILifecycleUnbound;
-      BindLifecycle.unboundHead = BindLifecycle.unboundTail = null;
-      while (current !== null) {
+      Lifecycle.unboundHead = Lifecycle.unboundTail = null;
+      while (current && current !== marker) {
         current.unbound(current.$unboundFlags);
         next = current.$nextUnbound;
         current.$nextUnbound = null;
         current = next;
       }
     }
-  }
+  },
 };

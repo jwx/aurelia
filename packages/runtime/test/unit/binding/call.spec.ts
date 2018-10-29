@@ -1,6 +1,6 @@
 import { CallScope, BindingBehavior, ExpressionKind } from './../../../src/binding/ast';
 import { spy, SinonSpy } from 'sinon';
-import { IExpression, IObserverLocator, AccessScope, BindingFlags, IScope, IChangeSet, SetterObserver, Call } from '../../../src/index';
+import { IExpression, IObserverLocator, AccessScope, LifecycleFlags, IScope, IChangeSet, SetterObserver, Call } from '../../../src/index';
 import { DI } from '../../../../kernel/src/index';
 import { createScopeForTest } from './shared';
 import { expect } from 'chai';
@@ -44,7 +44,7 @@ describe('Call', () => {
         it(`$bind() target=${$1} prop=${$2} expr=${$3} scope=${$4} renewScope=${$5}`, () => {
           // - Arrange -
           const { sut, changeSet, observerLocator } = setup(expr, target, prop);
-          const flags = BindingFlags.none;
+          const flags = LifecycleFlags.none;
           const targetObserver = observerLocator.getObserver(target, prop);
 
           massSpy(scope.bindingContext, 'theFunc');
@@ -124,7 +124,7 @@ describe('Call', () => {
         it(`$bind() target=${$1} prop=${$2} expr=${$3} scope=${$4}`, () => {
           // - Arrange -
           const { sut, changeSet, observerLocator } = setup(expr, target, prop);
-          const flags = BindingFlags.none;
+          const flags = LifecycleFlags.none;
           const targetObserver = observerLocator.getObserver(target, prop);
 
           massSpy(scope.bindingContext, 'theFunc');
@@ -217,7 +217,7 @@ describe('Call', () => {
         it(`$bind() target=${$1} prop=${$2} args=${$3} expr=${$4} scope=${$5}`, () => {
           // - Arrange -
           const { sut, changeSet, observerLocator } = setup(expr, target, prop);
-          const flags = BindingFlags.none;
+          const flags = LifecycleFlags.none;
           const targetObserver = observerLocator.getObserver(target, prop);
 
           massSpy(scope.bindingContext, 'theFunc');

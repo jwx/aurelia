@@ -1,4 +1,4 @@
-import { IExpression, IObserverLocator, Binding, BindingFlags, IScope, BindingMode, SelfBindingBehavior, IsBindingBehavior } from '../../src/index';
+import { IExpression, IObserverLocator, Binding, LifecycleFlags, IScope, BindingMode, SelfBindingBehavior, IsBindingBehavior } from '../../src/index';
 import { IContainer } from '../../../kernel/src/index';
 import { expect } from 'chai';
 
@@ -11,7 +11,7 @@ describe('SelfBindingBehavior', () => {
   let container: IContainer;
   let sut: SelfBindingBehavior;
   let binding: Binding;
-  let flags: BindingFlags;
+  let flags: LifecycleFlags;
   let scope: IScope;
   let originalCallSource: Function;
 

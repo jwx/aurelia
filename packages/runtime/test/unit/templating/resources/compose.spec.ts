@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { hydrateCustomElement } from '../behavior-assistance';
-import { DOM, IViewFactory, customElement, ITemplateDefinition, BindingFlags, Lifecycle, LifecycleFlags, IAttach, LinkedChangeList, RenderPlan, Compose } from '../../../../src/index';
+import { DOM, IViewFactory, customElement, ITemplateDefinition, LifecycleFlags, AttachLifecycle, AttachLifecycleFlags, IAttach, LinkedChangeList, RenderPlan, Compose } from '../../../../src/index';
 import { ViewFactoryFake } from '../fakes/view-factory-fake';
 
 describe('The "compose" custom element', () => {
@@ -109,7 +109,7 @@ describe('The "compose" custom element', () => {
           let bindCalled = false;
           child.$bind = function() { bindCalled = true; };
 
-          element.$bind(BindingFlags.fromBind);
+          element.$bind(LifecycleFlags.fromBind);
 
           expect(bindCalled).to.be.true;
         }, done);
@@ -144,8 +144,8 @@ describe('The "compose" custom element', () => {
           let unbindCalled = false;
           child.$unbind = function() { unbindCalled = true; };
 
-          element.$bind(BindingFlags.fromBind);
-          element.$unbind(BindingFlags.fromUnbind);
+          element.$bind(LifecycleFlags.fromBind);
+          element.$unbind(LifecycleFlags.fromUnbind);
 
           expect(unbindCalled).to.be.true;
         }, done);
@@ -225,13 +225,13 @@ describe('The "compose" custom element', () => {
   }
 
   function runAttachLifecycle(item: IAttach, encapsulationSource = null) {
-    const attachLifecycle = Lifecycle.beginAttach(cs, encapsulationSource, LifecycleFlags.none);
+    const attachLifecycle = AttachLifecycle.beginAttach(cs, encapsulationSource, AttachLifecycleFlags.none);
     attachLifecycle.attach(item);
     attachLifecycle.end();
   }
 
   function runDetachLifecycle(item: IAttach) {
-    const detachLifecycle = Lifecycle.beginDetach(cs, LifecycleFlags.none);
+    const detachLifecycle = AttachLifecycle.beginDetach(cs, AttachLifecycleFlags.none);
     detachLifecycle.detach(item);
     detachLifecycle.end();
   }

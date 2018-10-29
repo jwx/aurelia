@@ -1,7 +1,7 @@
 import {
   IView,
   IViewFactory,
-  BindingFlags,
+  LifecycleFlags,
   IScope,
   INode,
   IRenderContext,
@@ -35,7 +35,7 @@ export class ViewFake implements IView {
     };
   }
 
-  $addChild(child: IBindScope | IAttach, flags: BindingFlags): void {
+  $addChild(child: IBindScope | IAttach, flags: LifecycleFlags): void {
   }
 
   $removeChild(child: IBindScope | IAttach): void {
@@ -72,7 +72,7 @@ export class ViewFake implements IView {
   }
 
   // IBindScope impl
-  $bind(flags: BindingFlags, scope: IScope): void {
+  $bind(flags: LifecycleFlags, scope: IScope): void {
     this.$scope = scope;
     this.$state |= LifecycleState.isBound;
   }
@@ -82,14 +82,14 @@ export class ViewFake implements IView {
   }
 
   // IAttach impl
-  $attach(encapsulationSource: INode, lifecycle: IAttachLifecycle): void {
+  $attach(encapsulationSource: INode, flags: LifecycleFlags): void {
     if (this.$state & LifecycleState.needsMount) {
       lifecycle.queueMount(this);
     }
     this.$state |= LifecycleState.isAttached;
   }
 
-  $detach(lifecycle: IDetachLifecycle): void {
+  $detach(flags: LifecycleFlags): void {
     lifecycle.queueUnmount(this);
     this.$state &= ~LifecycleState.isAttached;
   }
